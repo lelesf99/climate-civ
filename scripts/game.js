@@ -11,6 +11,7 @@ class Game {
         this.timer = null;
         this.timeLeft = 10;
         this.maxTime = 10;
+        this.selectedOption = null; // Track selected answer
     }
 
     init() {
@@ -19,7 +20,8 @@ class Game {
             this.players.push({
                 id: i,
                 name: `JOGADOR ${i + 1}`,
-                climateMeter: 0 // Starts neutral
+                climateMeter: 0, // Starts neutral
+                score: 0
             });
         }
         
@@ -37,6 +39,20 @@ class Game {
         this.activeDisaster = null;
         this.ui.showGameScreen();
         this.startTurn();
+    }
+    
+    selectOption(score) {
+        this.selectedOption = score;
+        this.ui.enableConfirmBtn();
+    }
+
+    confirmChoice() {
+        if (this.selectedOption !== null) {
+            this.ui.disableInteraction(); // Lock everything
+            this.handleAnswer(this.selectedOption);
+            this.selectedOption = null; // Reset
+            this.ui.disableConfirmBtn();
+        }
     }
 
     startTurn() {
@@ -125,23 +141,38 @@ class Game {
 
     handleAnswer(score) {
         this.stopTimer(); // Stop timer when answered
+        
+        // 1. Clear Disaster Immediately -> REMOVED per user request to keep effects
+        // this.ui.clearDisasters();
+
         const player = this.players[this.currentPlayerIndex];
         
-        // Update Meter (Clamped -1 to 1)
+        // 2. Update Meter
         player.climateMeter += score;
         if (player.climateMeter > this.maxDetail) player.climateMeter = this.maxDetail;
         if (player.climateMeter < this.minDetail) player.climateMeter = this.minDetail;
 
-        // Next Turn Logic
-        this.questionsAnsweredInRound++;
-        const questionsPerRound = 4 * GAME_DATA.config.questionsPerPlayerPerRound; // 4 players * 2 questions
+        // 3. Score Calculation & Animation
+        const points = this.calculatePoints(score, this.timeLeft);
+        player.score += points;
+        this.ui.showScorePopup(points, Math.ceil(this.timeLeft), score);
 
-        if (this.questionsAnsweredInRound >= questionsPerRound) {
-            this.endRound();
-        } else {
-            this.currentPlayerIndex = (this.currentPlayerIndex + 1) % 4;
-            this.startTurn();
-        }
+        // 4. Force UI Update
+        this.ui.updatePlayerCard(player); 
+
+        // 5. Wait for Linger (1.5s)
+        setTimeout(() => {
+            // Next Turn Logic
+            this.questionsAnsweredInRound++;
+            const questionsPerRound = 4 * GAME_DATA.config.questionsPerPlayerPerRound;
+
+            if (this.questionsAnsweredInRound >= questionsPerRound) {
+                this.endRound();
+            } else {
+                this.currentPlayerIndex = (this.currentPlayerIndex + 1) % 4;
+                this.startTurn();
+            }
+        }, 1000);
     }
 
     endRound() {
@@ -156,8 +187,39 @@ class Game {
         }
     }
 
+    calculatePoints(choicescore, time) {
+        let base = 5; // Neutral
+        if (choicescore > 0) base = 10; // Good
+        if (choicescore < 0) base = -5; // Bad
+        
+        // Multiplier: Time (min 1 second)
+        const timeMult = Math.max(1, Math.ceil(time));
+        return base * timeMult;
+    }
+
     endGame() {
         this.ui.showEndScreen(this.players);
+        this.saveScores();
+    }
+
+    saveScores() {
+        const leaderboard = JSON.parse(localStorage.getItem('climate_leaderboard') || '[]');
+        
+        this.players.forEach(p => {
+            leaderboard.push({
+                name: p.name,
+                score: p.score,
+                date: new Date().toISOString()
+            });
+        });
+
+        // Sort desc
+        leaderboard.sort((a, b) => b.score - a.score);
+        // Keep top 10
+        const top10 = leaderboard.slice(0, 10);
+        
+        localStorage.setItem('climate_leaderboard', JSON.stringify(top10));
+        this.ui.renderLeaderboard(top10);
     }
 }
 
@@ -175,11 +237,17 @@ class UI {
             answers: document.getElementById('answers-grid'),
             disaster: document.getElementById('disaster-warning'),
             disasterName: document.getElementById('disaster-name'),
-            timer: document.getElementById('timer-display')
+            timer: document.getElementById('timer-display'),
+            confirmBtn: document.getElementById('confirm-btn'),
+            scorePopup: document.getElementById('score-popup'),
+            leaderboardBody: document.getElementById('leaderboard-body')
         };
 
         document.getElementById('start-btn').addEventListener('click', () => game.start());
         document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+        
+        // Confirm Button
+        this.els.confirmBtn.addEventListener('click', () => game.confirmChoice());
     }
 
     showStartScreen() {
@@ -201,10 +269,94 @@ class UI {
         resultsDiv.innerHTML = players.map(p => `
             <div class="result-card">
                 <h3>${p.name}</h3>
+                <p>Pontuação Final: <span class="score-highlight">${p.score}</span></p>
                 <p>Status Climático: ${this.getClimateStatus(p.climateMeter)}</p>
                 <div class="mini-bar" style="width:${this.getMeterPercent(p.climateMeter)}%"></div>
             </div>
         `).join('');
+    }
+
+    renderLeaderboard(data) {
+        this.els.leaderboardBody.innerHTML = data.map((entry, i) => `
+            <tr>
+                <td>#${i+1}</td>
+                <td>${entry.name}</td>
+                <td>${entry.score}</td>
+            </tr>
+        `).join('');
+    }
+
+    showScorePopup(points, time, typeScore) {
+        const el = this.els.scorePopup;
+        el.classList.remove('hidden');
+        
+        let label = "NEUTRO";
+        let base = 5;
+        let color = "var(--text-color)";
+        
+        if (typeScore > 0) { label = "ÓTIMO"; base = 10; color = "var(--meter-good)"; }
+        if (typeScore < 0) { label = "CRÍTICO"; base = -5; color = "var(--meter-bad)"; }
+        
+        // Setup Initial HTML
+        el.style.color = color;
+        el.innerHTML = `
+            <div class="score-anim-box">
+                <span class="score-label">${label}</span>
+                <div class="score-math">
+                    <span class="base-pts">${base}</span>
+                    <span class="x-icon">×</span>
+                    <span class="time-mult" id="anim-time">${time}s</span>
+                </div>
+                <div class="score-total" id="anim-total">0</div>
+            </div>
+        `;
+        
+        // Animation Logic: Smooth Drain (60fps)
+        const duration = 1000; // 1 second smooth animation
+        const startTime = performance.now();
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing (optional, but Linear feels more mechanical/industrial)
+            // Using easeOutQuad for better feel: 1 - (1 - x) * (1 - x)
+            const ease = 1 - (1 - progress) * (1 - progress);
+            
+            // Interpolate
+            const currentVisualTime = Math.max(0, time - (time * ease));
+            const currentVisualScore = Math.min(points, 0 + (points * ease));
+            
+            const tEl = document.getElementById('anim-time');
+            const sEl = document.getElementById('anim-total');
+            
+            if (tEl && sEl) {
+                // Show 1 decimal place for time to make it look fast and techy
+                tEl.innerText = `${currentVisualTime.toFixed(1)}s`;
+                sEl.innerText = `= ${Math.floor(currentVisualScore)}`;
+            }
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Final State
+                if (tEl) tEl.innerText = `0.0s`;
+                if (sEl) {
+                    sEl.innerText = `= ${points}`;
+                    // Big impact at the end
+                    sEl.style.transform = "scale(1.2)";
+                    sEl.style.transition = "transform 0.2s";
+                    setTimeout(() => sEl.style.transform = "scale(1)", 200);
+                }
+            }
+        };
+        
+        requestAnimationFrame(animate);
+        
+        // Hide after 1.8s (giving a bit more time to read final result)
+        setTimeout(() => {
+            el.classList.add('hidden');
+        }, 1800);
     }
 
     getClimateStatus(score) {
@@ -217,13 +369,39 @@ class UI {
     initDashboard() {
         this.els.dashboard.innerHTML = this.game.players.map(p => `
             <div class="player-card" id="p-card-${p.id}">
-                <span class="player-name">${p.name}</span>
+                <div class="card-header">
+                    <span class="player-name">${p.name}</span>
+                    <span class="player-score" id="p-score-${p.id}">PTS: 0</span>
+                </div>
                 <label class="meter-label">Aquecimento Global</label>
                 <div class="mini-meter">
                     <div class="mini-meter-fill" id="p-meter-${p.id}" style="width: 50%; background-color: yellow"></div>
                 </div>
             </div>
         `).join('');
+    }
+
+    updatePlayerCard(player) {
+        const meter = document.getElementById(`p-meter-${player.id}`);
+
+        if (!meter) return;
+
+        // Update Score Text
+        const scoreEl = document.getElementById(`p-score-${player.id}`);
+        if (scoreEl) scoreEl.innerText = `PTS: ${player.score}`;
+
+        const percent = this.getMeterPercent(player.climateMeter);
+        const color = this.getMeterColor(player.climateMeter);
+        
+        meter.style.width = `${percent}%`;
+        meter.style.backgroundColor = color;
+
+        // Pulse check
+        if (player.climateMeter <= -0.8) {
+            meter.classList.add('pulse-red');
+        } else {
+            meter.classList.remove('pulse-red');
+        }
     }
 
     renderTurn(activePlayer, round, question, disaster) {
@@ -268,7 +446,9 @@ class UI {
         
         // Answers
         this.els.answers.innerHTML = '';
-        question.options.forEach(opt => {
+        this.disableConfirmBtn(); // Reset confirm button state per turn
+
+        question.options.forEach((opt, idx) => {
             let optText = opt.text;
             if (disaster && disaster.id === 'flood') {
                 optText = this.applyFloodEffect(optText);
@@ -276,8 +456,17 @@ class UI {
 
             const btn = document.createElement('button');
             btn.className = 'answer-btn';
-            btn.innerHTML = `${optText}`; // Changed to innerHTML
-            btn.onclick = () => this.game.handleAnswer(opt.score);
+            btn.innerHTML = `${optText}`; 
+            btn.dataset.id = idx;
+            
+            btn.onclick = () => {
+                // UI Highlight
+                document.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                
+                // Logic
+                this.game.selectOption(opt.score);
+            };
             this.els.answers.appendChild(btn);
         });
 
@@ -288,6 +477,23 @@ class UI {
         } else {
             this.els.disaster.classList.add('hidden');
         }
+    }
+
+    enableConfirmBtn() {
+        this.els.confirmBtn.disabled = false;
+        this.els.confirmBtn.classList.add('active');
+    }
+
+    disableConfirmBtn() {
+        this.els.confirmBtn.disabled = true;
+        this.els.confirmBtn.classList.remove('active');
+    }
+
+    disableInteraction() {
+        // Disable all answer buttons
+        const btns = document.querySelectorAll('.answer-btn');
+        btns.forEach(btn => btn.disabled = true);
+        this.disableConfirmBtn();
     }
 
     applyDisasterEffect(disaster) {
