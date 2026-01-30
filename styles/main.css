@@ -135,6 +135,13 @@ h1 {
     transform: scale(0.98);
 }
 
+.small-btn {
+    padding: 8px 12px;
+    font-size: 1.2rem;
+    margin-top: 0;
+    line-height: 1;
+}
+
 /* CRT Shader Effect */
 /* CRT Shader Effect */
 #scanline {

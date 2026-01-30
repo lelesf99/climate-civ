@@ -12,6 +12,7 @@ class Game {
         this.timeLeft = 10;
         this.maxTime = 10;
         this.selectedOption = null; // Track selected answer
+        this.audio = new AudioController(); // Initialize Audio
     }
 
     init() {
@@ -117,6 +118,7 @@ class Game {
     handleTimeout() {
         this.stopTimer();
         alert("TEMPO ESGOTADO! Penalidade aplicada.");
+        this.audio.play('fail'); // New Fail Sound
         this.handleAnswer(-1); // Penalty for timeout
     }
 
@@ -124,6 +126,10 @@ class Game {
         const disasters = GAME_DATA.disasters;
         const randomDisaster = disasters[Math.floor(Math.random() * disasters.length)];
         this.activeDisaster = randomDisaster;
+        
+        // Audio Warning (Looping)
+        this.audio.playAlarm();
+        
         this.ui.applyDisasterEffect(randomDisaster);
     }
 
@@ -142,6 +148,9 @@ class Game {
     handleAnswer(score) {
         this.stopTimer(); // Stop timer when answered
         
+        // STOP ALARM if it was playing (Disaster resolved or ignored)
+        this.audio.stopAlarm();
+        
         // 1. Clear Disaster Immediately -> REMOVED per user request to keep effects
         // this.ui.clearDisasters();
 
@@ -155,6 +164,14 @@ class Game {
         // 3. Score Calculation & Animation
         const points = this.calculatePoints(score, this.timeLeft);
         player.score += points;
+
+        // Play Sound based on choice quality
+        if (score < 0) {
+            this.audio.play('fail');
+        } else {
+            this.audio.play('success');
+        }
+
         this.ui.showScorePopup(points, Math.ceil(this.timeLeft), score);
 
         // 4. Force UI Update
@@ -240,14 +257,34 @@ class UI {
             timer: document.getElementById('timer-display'),
             confirmBtn: document.getElementById('confirm-btn'),
             scorePopup: document.getElementById('score-popup'),
-            leaderboardBody: document.getElementById('leaderboard-body')
+            scorePopup: document.getElementById('score-popup'),
+            leaderboardBody: document.getElementById('leaderboard-body'),
+            muteBtn: document.getElementById('mute-btn')
         };
 
-        document.getElementById('start-btn').addEventListener('click', () => game.start());
-        document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+        // Mute Toggle
+        if (this.els.muteBtn) {
+            this.els.muteBtn.addEventListener('click', () => {
+                const isMuted = this.game.audio.toggleMute();
+                this.els.muteBtn.innerText = isMuted ? "🔇" : "🔊";
+            });
+        }
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            this.game.audio.play('click');
+            this.game.audio.playAmbiance(); // Start BG Music
+            game.start();
+        });
+        document.getElementById('restart-btn').addEventListener('click', () => {
+             this.game.audio.play('click');
+             location.reload();
+        });
         
         // Confirm Button
-        this.els.confirmBtn.addEventListener('click', () => game.confirmChoice());
+        this.els.confirmBtn.addEventListener('click', () => {
+            this.game.audio.play('confirm');
+            game.confirmChoice();
+        });
     }
 
     showStartScreen() {
@@ -460,6 +497,7 @@ class UI {
             btn.dataset.id = idx;
             
             btn.onclick = () => {
+                this.game.audio.play('click');
                 // UI Highlight
                 document.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
