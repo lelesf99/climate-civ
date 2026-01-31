@@ -1,135 +1,64 @@
 class AudioController {
     constructor() {
-        this.muted = false;
-        this.volume = 0.5;
-        this.sounds = {};
-        
-        // Sound Dictionary - User provided
-        this.sources = {
-            'click': 'assets/audio/click.mp3',
-            'success': 'assets/audio/success.wav',
-            'fail': 'assets/audio/fail.wav',
-            'alarm': 'assets/audio/disaster_alarm.wav',
-            'ambiance': 'assets/audio/ambiance.ogg',
-            'confirm': 'assets/audio/red_btn.wav'
+        this.sounds = {
+            'click': new Audio('assets/audio/click.mp3'),
+            'success': new Audio('assets/audio/success.wav'),
+            'fail': new Audio('assets/audio/fail.wav'),
+            'alarm': new Audio('assets/audio/disaster_alarm.wav'),
+            'ambiance': new Audio('assets/audio/ambiance.ogg'),
+            'confirm': new Audio('assets/audio/red_btn.wav')
         };
+        // Default volumes
+        this.defaultVolumes = {
+            'alarm': 0.3,
+            'ambiance': 0.5,
+            'click': 0.1,
+            'confirm': 0.5,
+            'fail': 0.5,
+            'success': 0.5
+        };
+        this.sounds.alarm.volume = this.defaultVolumes.alarm;
+        this.sounds.ambiance.volume = this.defaultVolumes.ambiance;
+        this.sounds.click.volume = this.defaultVolumes.click;
+        this.sounds.confirm.volume = this.defaultVolumes.confirm;
+        this.sounds.fail.volume = this.defaultVolumes.fail;
+        this.sounds.success.volume = this.defaultVolumes.success;
 
-        this.preload();
-        
-        this.ambianceTrack = null;
-        this.alarmTrack = null;
+        this.sounds.alarm.loop = true;
+        this.sounds.ambiance.loop = true;
+
+        this.printVolumes();
     }
 
-    preload() {
-        for (let key in this.sources) {
-            const audio = new Audio(this.sources[key]);
-            audio.volume = this.volume;
-            
-            // Custom Volume Adjustments
-            if (key === 'alarm') {
-                 audio.volume = this.volume * 0.2; // 20% volume for alarm (Lowered again)
-            }
-            if (key === 'fail') {
-                 audio.volume = this.volume * 0.4; // 40% volume for fail
-            }
-            
-            this.sounds[key] = audio;
-            
-            // Log errors
-            audio.onerror = () => {
-                console.warn(`Failed to load sound: ${key} from ${this.sources[key]}`);
-            };
+    printVolumes() {
+        for (let key in this.sounds) {
+            console.log(key, this.sounds[key].volume);
         }
     }
 
     play(key) {
-        if (this.muted) return;
-        
-        const sound = this.sounds[key];
-        if (sound) {
-            // Clone node to allow overlapping sounds (rapid clicks)
-            const clone = sound.cloneNode();
-            
-            // Apply specific volume again to clones
-            if (key === 'alarm') {
-                clone.volume = this.volume * 0.2;
-            } else if (key === 'fail') {
-                clone.volume = this.volume * 0.4;
-            } else {
-                clone.volume = this.volume;
-            }
-
-            clone.play().catch(e => console.warn("Audio play blocked", e));
+        const audio = this.sounds[key];
+        audio.volume = audio.muted ? 0 : this.defaultVolumes[key];
+        if (audio.ended || audio.paused) {
+            audio.play().catch(e => console.warn("Audio play blocked", e));
         } else {
-             // Silently fail
+            const clone = audio.cloneNode();
+            clone.volume = audio.muted ? 0 : this.defaultVolumes[key];
+            clone.play().catch(e => console.warn("Audio play blocked", e));
+            clone.onended = () => {
+                clone.remove();
+                console.log("Audio ended, clone removed");
+            };
         }
     }
-
-    playAlarm() {
-        if (this.muted) return;
-
-        if (!this.alarmTrack) {
-            this.alarmTrack = this.sounds['alarm'];
-            if (this.alarmTrack) {
-                this.alarmTrack.loop = true; // Loop the alarm
-                this.alarmTrack.volume = this.volume * 0.2;
-            }
-        }
-
-        if (this.alarmTrack) {
-            this.alarmTrack.play().catch(e => console.log("Alarm play blocked"));
-        }
-    }
-
-    stopAlarm() {
-        if (this.alarmTrack) {
-            this.alarmTrack.pause();
-            this.alarmTrack.currentTime = 0;
-        }
-    }
-
-    playAmbiance() {
-        if (this.muted) return;
-        
-        if (!this.ambianceTrack) {
-            this.ambianceTrack = this.sounds['ambiance'];
-            if (this.ambianceTrack) {
-                this.ambianceTrack.loop = true;
-                this.ambianceTrack.volume = this.volume * 0.5; // Lower volume for BG
-            }
-        }
-        
-        if (this.ambianceTrack) {
-            this.ambianceTrack.play().catch(e => console.log("Ambiance autoplay blocked"));
-        }
-    }
-
-    stopAmbiance() {
-        if (this.ambianceTrack) {
-            this.ambianceTrack.pause();
-            this.ambianceTrack.currentTime = 0;
-        }
+    pause(key) {
+        this.sounds[key].pause();
     }
 
     toggleMute() {
-        this.muted = !this.muted;
-        
-        if (this.muted) {
-            this.stopAmbiance();
-        } else {
-            this.playAmbiance();
-        }
-        
-        return this.muted;
-    }
-
-    setVolume(val) {
-        this.volume = Math.max(0, Math.min(1, val));
         for (let key in this.sounds) {
-            this.sounds[key].volume = this.volume;
-        }
-        if (this.ambianceTrack) {
-            this.ambianceTrack.volume = this.volume * 0.5;
+            this.sounds[key].muted = !this.sounds[key].muted;
+            this.sounds[key].volume = this.sounds[key].muted ? 0 : this.defaultVolumes[key];
         }
     }
 }

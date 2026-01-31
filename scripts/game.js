@@ -10,7 +10,7 @@ class Game {
         this.activeDisaster = null;
         this.timer = null;
         this.timeLeft = 10;
-        this.maxTime = 10;
+        this.maxTime = 1000;
         this.selectedOption = null; // Track selected answer
         this.audio = new AudioController(); // Initialize Audio
     }
@@ -25,10 +25,10 @@ class Game {
                 score: 0
             });
         }
-        
+
         // Load questions
         this.questions = [...GAME_DATA.questions];
-        
+
         this.ui = new UI(this);
         this.ui.initDashboard();
         this.ui.showStartScreen();
@@ -40,8 +40,9 @@ class Game {
         this.activeDisaster = null;
         this.ui.showGameScreen();
         this.startTurn();
+        this.audio.play('ambiance');
     }
-    
+
     selectOption(score) {
         this.selectedOption = score;
         this.ui.enableConfirmBtn();
@@ -58,7 +59,7 @@ class Game {
 
     startTurn() {
         const player = this.players[this.currentPlayerIndex];
-        
+
         // Reset Disaster
         this.activeDisaster = null;
         this.ui.clearDisasters();
@@ -90,18 +91,18 @@ class Game {
             // User said "2x faster", so let's drop by 1 every 500ms? Or drop by 2 every 1000ms.
             // Let's drop by 1, but run interval based on disaster. 
             // Better: Keep 1s interval but decrease timeLeft by modifier.
-            
+
             let decrement = 1;
             if (this.activeDisaster && this.activeDisaster.id === 'fire') {
-                 decrement = 2; 
-                 // Visual cue handled in CSS, logic here
+                decrement = 2;
+                // Visual cue handled in CSS, logic here
             }
 
             this.timeLeft -= decrement;
             if (this.timeLeft < 0) this.timeLeft = 0;
-            
+
             this.ui.updateTimer(this.timeLeft, this.maxTime);
-            
+
             if (this.timeLeft <= 0) {
                 this.handleTimeout();
             }
@@ -126,10 +127,10 @@ class Game {
         const disasters = GAME_DATA.disasters;
         const randomDisaster = disasters[Math.floor(Math.random() * disasters.length)];
         this.activeDisaster = randomDisaster;
-        
+
         // Audio Warning (Looping)
-        this.audio.playAlarm();
-        
+        this.audio.play('alarm');
+
         this.ui.applyDisasterEffect(randomDisaster);
     }
 
@@ -137,7 +138,7 @@ class Game {
         // Filter questions by round and unused
         const roundQuestions = this.questions.filter(q => q.round === round && !q.used);
         if (roundQuestions.length === 0) return null;
-        
+
         // Random pick
         const randomIndex = Math.floor(Math.random() * roundQuestions.length);
         const q = roundQuestions[randomIndex];
@@ -147,15 +148,15 @@ class Game {
 
     handleAnswer(score) {
         this.stopTimer(); // Stop timer when answered
-        
+
         // STOP ALARM if it was playing (Disaster resolved or ignored)
-        this.audio.stopAlarm();
-        
+        this.audio.pause('alarm');
+
         // 1. Clear Disaster Immediately -> REMOVED per user request to keep effects
         // this.ui.clearDisasters();
 
         const player = this.players[this.currentPlayerIndex];
-        
+
         // 2. Update Meter
         player.climateMeter += score;
         if (player.climateMeter > this.maxDetail) player.climateMeter = this.maxDetail;
@@ -175,7 +176,7 @@ class Game {
         this.ui.showScorePopup(points, Math.ceil(this.timeLeft), score);
 
         // 4. Force UI Update
-        this.ui.updatePlayerCard(player); 
+        this.ui.updatePlayerCard(player);
 
         // 5. Wait for Linger (1.5s)
         setTimeout(() => {
@@ -208,7 +209,7 @@ class Game {
         let base = 5; // Neutral
         if (choicescore > 0) base = 10; // Good
         if (choicescore < 0) base = -5; // Bad
-        
+
         // Multiplier: Time (min 1 second)
         const timeMult = Math.max(1, Math.ceil(time));
         return base * timeMult;
@@ -221,7 +222,7 @@ class Game {
 
     saveScores() {
         const leaderboard = JSON.parse(localStorage.getItem('climate_leaderboard') || '[]');
-        
+
         this.players.forEach(p => {
             leaderboard.push({
                 name: p.name,
@@ -234,7 +235,7 @@ class Game {
         leaderboard.sort((a, b) => b.score - a.score);
         // Keep top 10
         const top10 = leaderboard.slice(0, 10);
-        
+
         localStorage.setItem('climate_leaderboard', JSON.stringify(top10));
         this.ui.renderLeaderboard(top10);
     }
@@ -263,23 +264,21 @@ class UI {
         };
 
         // Mute Toggle
-        if (this.els.muteBtn) {
-            this.els.muteBtn.addEventListener('click', () => {
-                const isMuted = this.game.audio.toggleMute();
-                this.els.muteBtn.innerText = isMuted ? "🔇" : "🔊";
-            });
-        }
+        document.getElementById('mute-btn').addEventListener('click', () => {
+            this.game.audio.toggleMute();
+            this.els.muteBtn.innerText = this.els.muteBtn.innerText === "🔇" ? "🔊" : "🔇";
+            console.log(this.game.audio);
+        });
 
         document.getElementById('start-btn').addEventListener('click', () => {
             this.game.audio.play('click');
-            this.game.audio.playAmbiance(); // Start BG Music
             game.start();
         });
         document.getElementById('restart-btn').addEventListener('click', () => {
-             this.game.audio.play('click');
-             location.reload();
+            this.game.audio.play('click');
+            location.reload();
         });
-        
+
         // Confirm Button
         this.els.confirmBtn.addEventListener('click', () => {
             this.game.audio.play('confirm');
@@ -289,19 +288,19 @@ class UI {
         // Keyboard Listener
         document.addEventListener('keydown', (e) => {
             if (this.els.game.classList.contains('hidden')) return; // Only in game
-            
+
             const key = e.key;
-            
+
             // Number Keys 1-9
             if (key >= '1' && key <= '9') {
                 const idx = parseInt(key) - 1;
                 const buttons = document.querySelectorAll('.answer-btn');
-                
+
                 if (buttons[idx] && !buttons[idx].disabled) {
                     buttons[idx].click(); // Simulate click to trigger logic + visual
                 }
             }
-            
+
             // Space / Enter to Confirm
             if (key === ' ' || key === 'Enter') {
                 if (!this.els.confirmBtn.disabled) {
@@ -325,7 +324,7 @@ class UI {
     showEndScreen(players) {
         this.els.game.classList.add('hidden');
         this.els.end.classList.remove('hidden');
-        
+
         const resultsDiv = document.getElementById('final-results');
         resultsDiv.innerHTML = players.map(p => `
             <div class="result-card">
@@ -340,7 +339,7 @@ class UI {
     renderLeaderboard(data) {
         this.els.leaderboardBody.innerHTML = data.map((entry, i) => `
             <tr>
-                <td>#${i+1}</td>
+                <td>#${i + 1}</td>
                 <td>${entry.name}</td>
                 <td>${entry.score}</td>
             </tr>
@@ -350,14 +349,14 @@ class UI {
     showScorePopup(points, time, typeScore) {
         const el = this.els.scorePopup;
         el.classList.remove('hidden');
-        
+
         let label = "NEUTRO";
         let base = 5;
         let color = "var(--text-color)";
-        
+
         if (typeScore > 0) { label = "ÓTIMO"; base = 10; color = "var(--meter-good)"; }
         if (typeScore < 0) { label = "CRÍTICO"; base = -5; color = "var(--meter-bad)"; }
-        
+
         // Setup Initial HTML
         el.style.color = color;
         el.innerHTML = `
@@ -371,32 +370,32 @@ class UI {
                 <div class="score-total" id="anim-total">0</div>
             </div>
         `;
-        
+
         // Animation Logic: Smooth Drain (60fps)
         const duration = 1000; // 1 second smooth animation
         const startTime = performance.now();
-        
+
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             // Easing (optional, but Linear feels more mechanical/industrial)
             // Using easeOutQuad for better feel: 1 - (1 - x) * (1 - x)
             const ease = 1 - (1 - progress) * (1 - progress);
-            
+
             // Interpolate
             const currentVisualTime = Math.max(0, time - (time * ease));
             const currentVisualScore = Math.min(points, 0 + (points * ease));
-            
+
             const tEl = document.getElementById('anim-time');
             const sEl = document.getElementById('anim-total');
-            
+
             if (tEl && sEl) {
                 // Show 1 decimal place for time to make it look fast and techy
                 tEl.innerText = `${currentVisualTime.toFixed(1)}s`;
                 sEl.innerText = `= ${Math.floor(currentVisualScore)}`;
             }
-            
+
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
@@ -411,9 +410,9 @@ class UI {
                 }
             }
         };
-        
+
         requestAnimationFrame(animate);
-        
+
         // Hide after 1.8s (giving a bit more time to read final result)
         setTimeout(() => {
             el.classList.add('hidden');
@@ -453,7 +452,7 @@ class UI {
 
         const percent = this.getMeterPercent(player.climateMeter);
         const color = this.getMeterColor(player.climateMeter);
-        
+
         meter.style.width = `${percent}%`;
         meter.style.backgroundColor = color;
 
@@ -468,43 +467,43 @@ class UI {
     renderTurn(activePlayer, round, question, disaster) {
         // UI Updates
         this.els.round.innerText = `ANO: ${this.getYear(round)} | ${this.game.players[this.game.currentPlayerIndex].name}`;
-        
+
         // Update Dashboard (Preserve DOM for transitions)
         this.game.players.forEach((p, index) => {
-             const card = document.getElementById(`p-card-${p.id}`);
-             const meter = document.getElementById(`p-meter-${p.id}`);
-             const isActive = index === this.game.currentPlayerIndex;
-             
-             // Update Active State
-             if (isActive) card.classList.add('active');
-             else card.classList.remove('active');
+            const card = document.getElementById(`p-card-${p.id}`);
+            const meter = document.getElementById(`p-meter-${p.id}`);
+            const isActive = index === this.game.currentPlayerIndex;
 
-             // Update Meter
-             const percent = this.getMeterPercent(p.climateMeter);
-             const color = this.getMeterColor(p.climateMeter);
-             
-             meter.style.width = `${percent}%`;
-             meter.style.backgroundColor = color;
+            // Update Active State
+            if (isActive) card.classList.add('active');
+            else card.classList.remove('active');
 
-             // Pulsate if full (High Warming / Bad State)
-             // Internal -1 is now 100% displayed.
-             if (p.climateMeter <= -0.8) {
-                 meter.classList.add('pulse-red');
-             } else {
-                 meter.classList.remove('pulse-red');
-             }
+            // Update Meter
+            const percent = this.getMeterPercent(p.climateMeter);
+            const color = this.getMeterColor(p.climateMeter);
+
+            meter.style.width = `${percent}%`;
+            meter.style.backgroundColor = color;
+
+            // Pulsate if full (High Warming / Bad State)
+            // Internal -1 is now 100% displayed.
+            if (p.climateMeter <= -0.8) {
+                meter.classList.add('pulse-red');
+            } else {
+                meter.classList.remove('pulse-red');
+            }
         });
 
         // Question
         let qText = question.text;
-        
+
         // Disaster Logic: Flood (Wash away words)
         if (disaster && disaster.id === 'flood') {
-           qText = this.applyFloodEffect(qText);
+            qText = this.applyFloodEffect(qText);
         }
 
         this.els.qText.innerHTML = qText; // Changed from innerText to innerHTML to support spans
-        
+
         // Answers
         this.els.answers.innerHTML = '';
         this.disableConfirmBtn(); // Reset confirm button state per turn
@@ -517,15 +516,15 @@ class UI {
 
             const btn = document.createElement('button');
             btn.className = 'answer-btn';
-            btn.innerHTML = `<span class="key-hint">${idx + 1}</span>${optText}`; 
+            btn.innerHTML = `<span class="key-hint">${idx + 1}</span>${optText}`;
             btn.dataset.id = idx;
-            
+
             btn.onclick = () => {
                 this.game.audio.play('click');
                 // UI Highlight
                 document.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
-                
+
                 // Logic
                 this.game.selectOption(opt.score);
             };
@@ -610,11 +609,11 @@ class UI {
         // "filled up spirally as the timer goes down" -> Starts empty (or full) and fills up?
         // Let's assume fills up to 360deg as time drops.
         const percentage = (maxTime - time) / maxTime;
-        const angle = percentage * 360; 
-        
+        const angle = percentage * 360;
+
         // CSS Variable update
         if (this.els.app) {
-           this.els.app.style.setProperty('--timer-angle', `${angle}deg`);
+            this.els.app.style.setProperty('--timer-angle', `${angle}deg`);
         }
     }
 }

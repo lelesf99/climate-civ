@@ -351,13 +351,34 @@ h1 {
     text-shadow: 0 0 2px var(--accent-color);
 }
 
-.answer-btn:hover,
+@keyframes shadow-pulse {
+    0% {
+        box-shadow: 0 0 20px var(--action-color);
+    }
+
+    50% {
+        box-shadow: 0 0 40px var(--action-color);
+    }
+
+    100% {
+        box-shadow: 0 0 50px var(--action-color);
+    }
+}
+
+.answer-btn:hover {
+    background: rgba(234, 88, 12, 0.2);
+    border-color: var(--action-color);
+    color: #fff;
+    box-shadow: 0 0 20px var(--action-color);
+}
+
 .answer-btn.selected {
     background: rgba(234, 88, 12, 0.2);
     border-color: var(--action-color);
     color: #fff;
     box-shadow: 0 0 20px var(--action-color);
-    transform: scale(1.02);
+    transform: scale(1.05);
+    animation: shadow-pulse .5s infinite alternate;
 }
 
 .key-hint {
