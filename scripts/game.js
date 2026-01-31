@@ -285,6 +285,30 @@ class UI {
             this.game.audio.play('confirm');
             game.confirmChoice();
         });
+
+        // Keyboard Listener
+        document.addEventListener('keydown', (e) => {
+            if (this.els.game.classList.contains('hidden')) return; // Only in game
+            
+            const key = e.key;
+            
+            // Number Keys 1-9
+            if (key >= '1' && key <= '9') {
+                const idx = parseInt(key) - 1;
+                const buttons = document.querySelectorAll('.answer-btn');
+                
+                if (buttons[idx] && !buttons[idx].disabled) {
+                    buttons[idx].click(); // Simulate click to trigger logic + visual
+                }
+            }
+            
+            // Space / Enter to Confirm
+            if (key === ' ' || key === 'Enter') {
+                if (!this.els.confirmBtn.disabled) {
+                    this.els.confirmBtn.click();
+                }
+            }
+        });
     }
 
     showStartScreen() {
@@ -493,7 +517,7 @@ class UI {
 
             const btn = document.createElement('button');
             btn.className = 'answer-btn';
-            btn.innerHTML = `${optText}`; 
+            btn.innerHTML = `<span class="key-hint">${idx + 1}</span>${optText}`; 
             btn.dataset.id = idx;
             
             btn.onclick = () => {

@@ -360,6 +360,20 @@ h1 {
     transform: scale(1.02);
 }
 
+.key-hint {
+    display: inline-block;
+    border: 1px solid var(--accent-color);
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--accent-color);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    margin-right: 12px;
+    box-shadow: 0 0 5px rgba(34, 211, 238, 0.2);
+    font-weight: bold;
+}
+
 .answer-btn.selected {
     border-width: 2px;
     box-shadow: 0 0 30px var(--action-color), inset 0 0 20px rgba(234, 88, 12, 0.3);
