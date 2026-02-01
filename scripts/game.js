@@ -10,37 +10,56 @@ class Game {
         this.activeDisaster = null;
         this.timer = null;
         this.timeLeft = 10;
-        this.maxTime = 1000;
+        this.maxTime = 10;
         this.selectedOption = null; // Track selected answer
         this.audio = new AudioController(); // Initialize Audio
     }
 
     init() {
-        // Initialize 4 players
-        for (let i = 0; i < 4; i++) {
-            this.players.push({
-                id: i,
-                name: `JOGADOR ${i + 1}`,
-                climateMeter: 0, // Starts neutral
-                score: 0
-            });
-        }
-
         // Load questions
         this.questions = [...GAME_DATA.questions];
 
         this.ui = new UI(this);
-        this.ui.initDashboard();
         this.ui.showStartScreen();
     }
 
-    start() {
+    start(playerNames) {
+        this.players = playerNames.map((name, i) => ({
+            id: i,
+            name: name.toUpperCase() || `JOGADOR ${i + 1}`,
+            climateMeter: 0,
+            score: 0
+        }));
+
+        this.ui.initDashboard();
         this.currentRound = 1;
         this.currentPlayerIndex = 0;
         this.activeDisaster = null;
         this.ui.showGameScreen();
         this.startTurn();
         this.audio.play('ambiance');
+    }
+
+    restart() {
+        // Reset players
+        this.players.forEach(p => {
+            p.climateMeter = 0;
+            p.score = 0;
+        });
+
+        // Reset questions usage
+        this.questions.forEach(q => q.used = false);
+
+        // Reset state
+        this.currentRound = 1;
+        this.currentPlayerIndex = 0;
+        this.questionsAnsweredInRound = 0;
+        this.activeDisaster = null;
+
+        // UI Prep
+        this.ui.initDashboard();
+        this.ui.showGameScreen();
+        this.startTurn();
     }
 
     selectOption(score) {
@@ -87,10 +106,7 @@ class Game {
         this.ui.updateTimer(this.timeLeft);
 
         this.timer = setInterval(() => {
-            // FIRE DISASTER: Time goes 2x faster (decrement 2 per sec effectively, or just faster ticks? 
-            // User said "2x faster", so let's drop by 1 every 500ms? Or drop by 2 every 1000ms.
-            // Let's drop by 1, but run interval based on disaster. 
-            // Better: Keep 1s interval but decrease timeLeft by modifier.
+            // FIRE DISASTER: Time goes 2x faster (decrement 2 per sec effectively)
 
             let decrement = 1;
             if (this.activeDisaster && this.activeDisaster.id === 'fire') {
@@ -182,12 +198,12 @@ class Game {
         setTimeout(() => {
             // Next Turn Logic
             this.questionsAnsweredInRound++;
-            const questionsPerRound = 4 * GAME_DATA.config.questionsPerPlayerPerRound;
+            const questionsPerRound = this.players.length * GAME_DATA.config.questionsPerPlayerPerRound;
 
             if (this.questionsAnsweredInRound >= questionsPerRound) {
                 this.endRound();
             } else {
-                this.currentPlayerIndex = (this.currentPlayerIndex + 1) % 4;
+                this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
                 this.startTurn();
             }
         }, 1000);
@@ -260,7 +276,13 @@ class UI {
             scorePopup: document.getElementById('score-popup'),
             scorePopup: document.getElementById('score-popup'),
             leaderboardBody: document.getElementById('leaderboard-body'),
-            muteBtn: document.getElementById('mute-btn')
+            muteBtn: document.getElementById('mute-btn'),
+            setup: document.getElementById('player-setup-screen'),
+            inputsContainer: document.getElementById('player-inputs-container'),
+            addPlayerBtn: document.getElementById('add-player-btn'),
+            beginBtn: document.getElementById('begin-mission-btn'),
+            playAgainBtn: document.getElementById('play-again-btn'),
+            restartBtn: document.getElementById('restart-btn')
         };
 
         // Mute Toggle
@@ -272,9 +294,32 @@ class UI {
 
         document.getElementById('start-btn').addEventListener('click', () => {
             this.game.audio.play('click');
-            game.start();
+            this.showSetupScreen();
         });
-        document.getElementById('restart-btn').addEventListener('click', () => {
+
+        this.els.addPlayerBtn.addEventListener('click', () => {
+            this.game.audio.play('click');
+            this.addPlayerInput();
+        });
+
+        this.els.beginBtn.addEventListener('click', () => {
+            const inputs = this.els.inputsContainer.querySelectorAll('.player-name-input');
+            const names = Array.from(inputs).map(input => input.value.trim()).filter(name => name !== '');
+
+            if (names.length === 0) {
+                alert("Por favor, insira pelo menos um nome de jogador.");
+                return;
+            }
+
+            this.game.audio.play('confirm');
+            this.game.start(names);
+        });
+
+        this.els.playAgainBtn.addEventListener('click', () => {
+            this.game.audio.play('click');
+            this.game.restart();
+        });
+        this.els.restartBtn.addEventListener('click', () => {
             this.game.audio.play('click');
             location.reload();
         });
@@ -312,12 +357,58 @@ class UI {
 
     showStartScreen() {
         this.els.start.classList.remove('hidden');
+        this.els.setup.classList.add('hidden');
         this.els.game.classList.add('hidden');
         this.els.end.classList.add('hidden');
     }
 
-    showGameScreen() {
+    showSetupScreen() {
         this.els.start.classList.add('hidden');
+        this.els.setup.classList.remove('hidden');
+        this.els.inputsContainer.innerHTML = '';
+        this.addPlayerInput(); // Start with 1 player
+    }
+
+    addPlayerInput() {
+        const playerCount = this.els.inputsContainer.children.length;
+        if (playerCount >= 4) return;
+
+        const group = document.createElement('div');
+        group.className = 'player-input-group';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'player-name-input';
+        input.placeholder = `NOME DO JOGADOR ${playerCount + 1}`;
+        input.maxLength = 12;
+
+        group.appendChild(input);
+
+        if (playerCount > 0) {
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-player-btn';
+            removeBtn.innerText = '×';
+            removeBtn.onclick = () => {
+                group.remove();
+                this.updateAddButton();
+            };
+            group.appendChild(removeBtn);
+        }
+
+        this.els.inputsContainer.appendChild(group);
+        input.focus();
+
+        this.updateAddButton();
+    }
+
+    updateAddButton() {
+        const playerCount = this.els.inputsContainer.querySelectorAll('.player-name-input').length;
+        this.els.addPlayerBtn.style.display = playerCount >= 4 ? 'none' : 'block';
+    }
+
+    showGameScreen() {
+        this.els.setup.classList.add('hidden');
+        this.els.end.classList.add('hidden');
         this.els.game.classList.remove('hidden');
     }
 
@@ -420,7 +511,7 @@ class UI {
     }
 
     getClimateStatus(score) {
-        if (score === 1) return "UTIOPIA VERDE (Excelente)";
+        if (score === 1) return "UTOPIA VERDE (Excelente)";
         if (score === 0) return "ESTÁVEL (Neutro)";
         return "COLAPSO ECOLÓGICO (Crítico)";
     }

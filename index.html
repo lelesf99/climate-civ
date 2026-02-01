@@ -25,6 +25,15 @@
             <button id="start-btn" class="retro-btn">INICIAR SISTEMA</button>
         </div>
 
+        <div id="player-setup-screen" class="screen hidden">
+            <h1 class="glitch" data-text="PLANETAS">PLANETAS</h1>
+            <div id="player-inputs-container">
+                <!-- Inputs injected by JS -->
+            </div>
+            <button id="add-player-btn" class="retro-btn big-btn">+</button>
+            <button id="begin-mission-btn" class="retro-btn">INICIAR MISSÃO</button>
+        </div>
+
         <div id="game-screen" class="screen hidden">
             <div id="hud">
                 <div id="players-dashboard">
@@ -71,7 +80,10 @@
                     <tbody id="leaderboard-body"></tbody>
                 </table>
             </div>
-            <button id="restart-btn" class="retro-btn">REINICIAR</button>
+            <div style="display: flex; gap: 16px;">
+                <button id="play-again-btn" class="retro-btn">JOGAR NOVAMENTE</button>
+                <button id="restart-btn" class="retro-btn">REINICIAR</button>
+            </div>
         </div>
     </div>
     <!-- Mute Button -->
