@@ -415,6 +415,7 @@ class UI {
     showEndScreen(players) {
         this.els.game.classList.add('hidden');
         this.els.end.classList.remove('hidden');
+        this.clearDisasters();
 
         const resultsDiv = document.getElementById('final-results');
         resultsDiv.innerHTML = players.map(p => `
