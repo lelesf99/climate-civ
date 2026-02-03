@@ -1,0 +1,5 @@
+# Climate Civ - Ignoring sensitive config
+scripts/firebase-config.js
+.DS_Store
+node_modules/
+dist/
