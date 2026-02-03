@@ -18,86 +18,107 @@
     <div id="scanline"></div>
     <div id="score-popup" class="hidden"></div>
     <div id="app">
-        <!-- Screens will be injected here by JS -->
-        <div id="start-screen" class="screen active">
-            <h1 class="glitch" data-text="CIVILIZAÇÃO CLIMÁTICA">CIVILIZAÇÃO CLIMÁTICA</h1>
-            <p>Gerencie o futuro. Sobreviva aos desastres.</p>
-            <button id="start-btn" class="retro-btn">INICIAR SISTEMA</button>
-        </div>
-
-        <div id="player-setup-screen" class="screen hidden">
-            <h1 class="glitch" data-text="PLANETAS">PLANETAS</h1>
-            <div id="player-inputs-container">
-                <!-- Inputs injected by JS -->
-            </div>
-            <div style="display: flex; gap: 36px; justify-content: flex-end; width: 100%;">
-                <button id="add-player-btn" class="retro-btn icon-btn">+</button>
-                <button id="begin-mission-btn" class="retro-btn">INICIAR MISSÃO</button>
+        <!-- ROLE SELECTION -->
+        <div id="role-screen" class="screen active">
+            <h1 class="glitch" data-text="CLIMATE CIV ONLINE">CLIMATE CIV ONLINE</h1>
+            <p>Escolha seu papel na gestão do futuro</p>
+            <div class="role-buttons">
+                <button id="teacher-role-btn" class="retro-btn">SOU PROFESSOR (Anfitrião)</button>
+                <button id="player-role-btn" class="retro-btn">SOU JOGADOR</button>
             </div>
         </div>
 
-        <div id="game-screen" class="screen hidden">
+        <!-- TEACHER LOGIN / SETUP -->
+        <div id="teacher-setup-screen" class="screen hidden">
+            <h1>SESSÃO DO PROFESSOR</h1>
+            <div id="session-info" class="hidden">
+                <p>CÓDIGO DA SESSÃO:</p>
+                <h2 id="session-code-display" class="glitch">----</h2>
+                <p>Jogadores Conectados: <span id="player-count">0</span>/4</p>
+                <ul id="connected-players-list"></ul>
+                <button id="start-game-btn" class="retro-btn" disabled>INICIAR MISSÃO</button>
+            </div>
+            <button id="create-session-btn" class="retro-btn">CRIAR NOVA SESSÃO</button>
+        </div>
+
+        <!-- PLAYER JOIN -->
+        <div id="player-join-screen" class="screen hidden">
+            <h1>ENTRAR NA MISSÃO</h1>
+            <div class="input-group">
+                <input type="text" id="join-code-input" placeholder="CÓDIGO (4 DÍGITOS)" maxlength="4">
+                <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="12">
+            </div>
+            <button id="join-session-btn" class="retro-btn">CONECTAR</button>
+            <p id="join-status"></p>
+        </div>
+
+        <!-- MAIN GAME SCREEN (TEACHER VIEW) -->
+        <div id="teacher-game-screen" class="screen hidden">
             <div id="hud">
                 <div id="players-dashboard">
                     <!-- Player cards injected by JS -->
                 </div>
                 <div class="round-info">
                     <span id="round-display">ANO: 2025</span>
-                    <div id="timer-display" style="color: var(--accent-color); font-weight: bold; margin-top: 5px;">
-                        TEMPO: 10s</div>
+                    <div id="timer-display">90s</div>
                 </div>
             </div>
 
-            <div id="disaster-warning" class="hidden">
-                ⚠ ALERTA DE DESASTRE: <span id="disaster-name">TERREMOTO</span> ⚠
-            </div>
-
-            <div id="question-container">
-                <h2 id="question-text">Carregando pergunta...</h2>
-                <div id="answers-grid">
-                    <!-- Buttons injected via JS -->
-                </div>
-
-                <div id="confirm-container">
-                    <button id="confirm-btn" class="big-red-btn" disabled></button>
-                    <span class="button-label">CONFIRMAR <span class="key-hint">ESPAÇO/ENTER</span></span>
+            <div id="scenario-container">
+                <h2 id="scenario-text">Carregando cenário...</h2>
+                <div id="submission-status">
+                    <p>Aguardando decisões dos jogadores...</p>
+                    <div id="player-status-grid"></div>
                 </div>
             </div>
         </div>
 
+        <!-- PLAYER INTERACTION SCREEN -->
+        <div id="player-game-screen" class="screen hidden">
+            <div class="player-hud">
+                <span id="player-status-name">JOGADOR</span>
+                <div id="player-timer-display">90s</div>
+            </div>
+            <div id="resource-allocation-container">
+                <h3>ALOCAÇÃO DE RECURSOS</h3>
+                <p id="player-scenario-brief"></p>
+                <div id="resource-pool">RECURSOS DISPONÍVEIS: <span id="remaining-resources">100</span></div>
+
+                <div id="sliders-container">
+                    <!-- 5 Sliders injected by JS -->
+                </div>
+
+                <button id="submit-allocation-btn" class="big-red-btn">CONFIRMAR DECISÃO</button>
+            </div>
+            <div id="wait-message" class="hidden">
+                <h2 class="glitch">DECISÃO ENVIADA</h2>
+                <p>Aguardando outros jogadores e análise do sistema...</p>
+            </div>
+        </div>
+
+        <!-- END SCREEN -->
         <div id="end-screen" class="screen hidden">
             <h1>RELATÓRIO FINAL</h1>
             <div id="final-results"></div>
-
-            <div id="leaderboard-container">
-                <h2>RANKING GLOBAL</h2>
-                <table id="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>POS</th>
-                            <th>JOGADOR</th>
-                            <th>PONTOS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-body"></tbody>
-                </table>
-            </div>
-            <div style="display: flex; gap: 16px;">
-                <button id="play-again-btn" class="retro-btn">JOGAR NOVAMENTE</button>
-                <button id="restart-btn" class="retro-btn">REINICIAR</button>
-            </div>
+            <button id="restart-btn" class="retro-btn">NOVA PARTIDA</button>
         </div>
     </div>
+
     <!-- Mute Button -->
     <div id="audio-controls" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
         <button id="mute-btn" class="retro-btn icon-btn">🔊</button>
     </div>
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
     <script src="scripts/data.js"></script>
-    <script src="scripts/disasters.js"></script>
+    <script src="scripts/firebase-config.js"></script>
+    <script src="scripts/api.js"></script>
     <script src="scripts/AudioController.js"></script>
     <script src="scripts/game.js"></script>
-
 </body>
 
 </html>
