@@ -15,9 +15,22 @@ class FirebaseProxy {
         // Use global config if not provided, for easy integration with external scripts
         const finalConfig = config && Object.keys(config).length > 0 ? config : window.FIREBASE_CONFIG;
 
-        if (!finalConfig || !finalConfig.apiKey) {
-            console.error("Firebase Configuration is missing or incomplete! Please check 'scripts/firebase-config.js'.");
-            alert("Aviso: Configuração do Firebase ausente. O modo multiplayer não funcionará.");
+        if (!finalConfig) {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            let msg = "Aviso: Configuração do Firebase não encontrada.\n\n";
+            if (isLocal) {
+                msg += "LOCAL: O arquivo 'scripts/firebase-config.js' parece não ter carregado ou não define window.FIREBASE_CONFIG.";
+            } else {
+                msg += "DEPLOY: O arquivo 'scripts/firebase-config.js' está faltando ou vazio. Verifique se o GitHub Secret 'FIREBASE_CONFIG' foi definido.";
+            }
+            console.error(msg);
+            alert(msg);
+            return;
+        }
+
+        if (!finalConfig.apiKey) {
+            console.error("Configuração encontrada, mas 'apiKey' está ausente.", finalConfig);
+            alert("Aviso: Configuração do Firebase incompleta (apiKey faltando).");
             return;
         }
 
