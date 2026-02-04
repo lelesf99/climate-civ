@@ -1,3 +1,4 @@
+var roundRobinIndex = 0;
 class Game {
     constructor() {
         this.role = null;
@@ -441,10 +442,11 @@ class UI {
         allSliders.forEach(s => total += parseInt(s.value));
 
         if (total > 100) {
-            const diff = total - 100;
-            // This is a simple balancing: reduce others proportionally
-            // In a better implementation, we'd cap the current slider or reduce others more smartly.
-            changedSlider.value = parseInt(changedSlider.value) - diff;
+            let excess = total - 100;
+            const otherSliders = Array.from(allSliders).filter(s => s !== changedSlider && parseInt(s.value) > 0);
+            roundRobinIndex = (roundRobinIndex + 1) % otherSliders.length;
+            const sliderToReduce = otherSliders[roundRobinIndex];
+            sliderToReduce.value = parseInt(sliderToReduce.value) - Math.ceil(excess / otherSliders.length);
         }
 
         this.updateSliderDisplays(allSliders);
