@@ -20,36 +20,139 @@
     <div id="app">
         <!-- ROLE SELECTION -->
         <div id="role-screen" class="screen active">
-            <h1 class="glitch" data-text="CLIMATE CIV ONLINE">CLIMATE CIV ONLINE</h1>
-            <p>Escolha seu papel na gestão do futuro</p>
-            <div class="role-buttons">
-                <button id="teacher-role-btn" class="retro-btn">SOU PROFESSOR (Anfitrião)</button>
-                <button id="player-role-btn" class="retro-btn">SOU JOGADOR</button>
+            <header class="hero-section">
+                <h1 class="glitch" data-text="CLIMATE CIV">CIVILIZAÇÃO CLIMÁTICA</h1>
+                <p class="tagline">O SIMULADOR DE GESTÃO CLIMÁTICA PARA LÍDERES DO FUTURO</p>
+            </header>
+
+            <div class="button-group">
+                <button id="teacher-role-btn" class="retro-btn retro-btn-secondary">Professor</button>
+                <button id="player-role-btn" class="retro-btn">Aluno</button>
             </div>
+
+            <section class="tutorial-section">
+                <h2>COMO JOGAR</h2>
+                <div class="tutorial-steps">
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">01</span>
+                            <h3>O DESAFIO</h3>
+                        </div>
+                        <p>Você é o líder de uma nação no ano 2025. O clima está mudando e sua missão é garantir a
+                            sobrevivência e o progresso da sua civilização até o ano 2100.</p>
+                        <!-- <img src="assets/tutorial/step1.png" alt="Tela de Início" class="tutorial-img"> -->
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">02</span>
+                            <h3>ALOCAÇÃO DE RECURSOS</h3>
+                        </div>
+                        <p>A cada rodada, você recebe 100 créditos. Use os sliders para distribuir esse valor entre 5
+                            iniciativas. Escolha bem onde investir mais!</p>
+                        <!-- <img src="assets/tutorial/step2.png" alt="Sliders de Recursos" class="tutorial-img"> -->
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">03</span>
+                            <h3>CONSEQUÊNCIAS</h3>
+                        </div>
+                        <p>Seus investimentos geram uma pontuação. Pontuações baixas podem levar a desastres e crises
+                            crimáticas, enquanto pontuações altas trazem estabilidade.</p>
+                        <!-- <img src="assets/tutorial/step3.png" alt="Resultado da Rodada" class="tutorial-img"> -->
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">04</span>
+                            <h3>O VEREDITO</h3>
+                        </div>
+                        <p>Após 5 rodadas, veremos o legado da sua gestão. Sua civilização alcançará a Utopia Verde ou o
+                            Colapso Total?</p>
+                        <!-- <img src="assets/tutorial/step4.png" alt="Resultado Final" class="tutorial-img"> -->
+                    </div>
+                </div>
+            </section>
+
+            <footer class="main-footer">
+                <p>&copy; 2026 Leles Tecnologia LTDA. Todos os direitos reservados.</p>
+                <p>Licenciado para uso educacional.</p>
+            </footer>
         </div>
 
         <!-- TEACHER LOGIN / SETUP -->
         <div id="teacher-setup-screen" class="screen hidden">
-            <h1>SESSÃO DO PROFESSOR</h1>
+            <h1>CENTRO DE COMANDO</h1>
             <div id="session-info" class="hidden">
-                <p>CÓDIGO DA SESSÃO:</p>
-                <h2 id="session-code-display" class="glitch">----</h2>
-                <p>Jogadores Conectados: <span id="player-count">0</span>/4</p>
-                <ul id="connected-players-list"></ul>
-                <button id="start-game-btn" class="retro-btn" disabled>INICIAR MISSÃO</button>
+                <div class="command-center-header">
+                    <p class="session-label">CÓDIGO DA MISSÃO</p>
+                    <h2 id="session-code-display" class="glitch mission-code">----</h2>
+                    <p class="status-text">AGUARDANDO LÍDERES | <span id="player-count">0</span>/6 CONECTADOS</p>
+                </div>
+
+                <div class="teacher-lobby-grid" id="teacher-lobby-grid">
+                    <!-- Player cards injected by JS -->
+                </div>
+
+                <div class="button-group">
+                    <button id="cancel-session-btn" class="retro-btn retro-btn-secondary return-btn">CANCELAR</button>
+                    <button id="start-game-btn" class="retro-btn" disabled>INICIAR MISSÃO</button>
+                </div>
             </div>
-            <button id="create-session-btn" class="retro-btn">CRIAR NOVA SESSÃO</button>
+            <div id="teacher-initial-actions" class="button-group">
+                <button id="create-session-btn" class="retro-btn">CRIAR NOVA SESSÃO</button>
+                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn">VOLTAR</button>
+                <div id="create-loading" class="loading-container hidden">
+                    <div class="loading-bar"></div>
+                    <p>Sincronizando com o satélite...</p>
+                </div>
+            </div>
+            <div class="reconnect-container">
+                <div class="input-group">
+                    <h2>JÁ TEM UMA SESSÃO?</h2>
+                    <p>Insira o código da sessão para reconectar.</p>
+                    <input class="retro-input" type="text" id="reconnect-code-input" placeholder="CÓDIGO 4 DÍGITOS"
+                        maxlength="4">
+                    <button id="reconnect-session-btn" class="retro-btn retro-btn-secondary">RECONECTAR</button>
+                    <div id="reconnect-loading" class="loading-container hidden">
+                        <div class="loading-bar"></div>
+                        <p>Recuperando sinal da base...</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- PLAYER JOIN -->
         <div id="player-join-screen" class="screen hidden">
             <h1>ENTRAR NA MISSÃO</h1>
             <div class="input-group">
-                <input type="text" id="join-code-input" placeholder="CÓDIGO (4 DÍGITOS)" maxlength="4">
-                <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="12">
+                <input class="retro-input" type="text" id="join-code-input" placeholder="CÓDIGO (4 DÍGITOS)"
+                    maxlength="4">
+                <input class="retro-input" type="text" id="player-name-input" placeholder="SEU NOME" maxlength="12">
             </div>
-            <button id="join-session-btn" class="retro-btn">CONECTAR</button>
+            <div class="button-group">
+                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn">VOLTAR</button>
+                <button id="join-session-btn" class="retro-btn">CONECTAR</button>
+            </div>
             <p id="join-status"></p>
+        </div>
+
+        <!-- PLAYER LOBBY -->
+        <div id="player-lobby-screen" class="screen hidden">
+            <h1>PREPARANDO MISSÃO</h1>
+            <p>Você está conectado! Aguardando o professor iniciar a missão.</p>
+
+            <div class="lobby-container">
+                <h2>LÍDERES CONECTADOS:</h2>
+                <ul id="lobby-players-list" class="lobby-list">
+                    <!-- Players injected by JS -->
+                </ul>
+            </div>
+
+            <div class="button-group">
+                <button id="leave-session-btn" class="retro-btn retro-btn-secondary">SAIR DA SESSÃO</button>
+            </div>
         </div>
 
         <!-- MAIN GAME SCREEN (TEACHER VIEW) -->
@@ -88,11 +191,60 @@
                     <!-- 5 Sliders injected by JS -->
                 </div>
 
-                <button id="submit-allocation-btn" class="big-red-btn">CONFIRMAR DECISÃO</button>
+
+                <div class="presidential-btn-container">
+                    <button id="submit-allocation-btn" class="big-red-btn">
+                        <span class="btn-icon">●</span>
+                    </button>
+                    <div class="btn-label">
+                        <span class="btn-text">CONFIRMAR DECISÃO</span>
+                        <span class="key-hint">ESPAÇO</span>
+                    </div>
+                </div>
             </div>
             <div id="wait-message" class="hidden">
                 <h2 class="glitch">DECISÃO ENVIADA</h2>
                 <p>Aguardando outros jogadores e análise do sistema...</p>
+            </div>
+        </div>
+
+        <!-- ROUND RESULTS SCREEN (PLAYER) -->
+        <div id="round-results-screen" class="screen hidden">
+            <h1>RESULTADO DA RODADA <span id="results-round-number">1</span></h1>
+
+            <div class="player-feedback">
+                <div class="round-score-display">
+                    <span class="score-label">PONTOS GANHOS</span>
+                    <span id="round-score" class="score-value">0</span>
+                </div>
+
+                <div id="performance-feedback" class="feedback-message">
+                    <!-- Status injected by JS -->
+                </div>
+
+                <div id="initiative-breakdown" class="initiative-breakdown">
+                    <!-- Initiative precision details injected by JS -->
+                </div>
+
+                <div class="total-score-display">
+                    <span class="score-label">PONTUAÇÃO TOTAL</span>
+                    <span id="total-score" class="score-value">0</span>
+                </div>
+
+                <p class="waiting-text">Aguardando próxima rodada...</p>
+            </div>
+        </div>
+
+        <!-- ROUND RESULTS SCREEN (TEACHER) -->
+        <div id="teacher-results-screen" class="screen hidden">
+            <h1>ANÁLISE DA RODADA <span id="teacher-results-round-number">1</span></h1>
+
+            <div class="results-grid" id="results-player-grid">
+                <!-- Player result cards injected by JS -->
+            </div>
+
+            <div class="button-group">
+                <button id="next-round-btn" class="retro-btn">PRÓXIMA RODADA</button>
             </div>
         </div>
 
@@ -124,18 +276,18 @@
                         <!-- History items injected by JS -->
                     </div>
                 </div>
-                <button id="player-ready-btn" class="big-red-btn">QUERO JOGAR NOVAMENTE</button>
+                <button id="player-ready-btn" class="retro-btn">QUERO JOGAR NOVAMENTE</button>
                 <div id="player-ready-msg" class="hidden">
                     <p class="glitch">SINAL DE PRONTIDÃO ENVIADO</p>
                     <p>Aguardando o professor e outros líderes...</p>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Mute Button -->
-    <div id="audio-controls" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
-        <button id="mute-btn" class="retro-btn icon-btn">🔊</button>
+        <!-- Mute Button -->
+        <div id="audio-controls" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+            <button id="mute-btn" class="retro-btn icon-btn">🔊</button>
+        </div>
     </div>
 
     <!-- Firebase SDKs -->

@@ -20,6 +20,9 @@ service cloud.firestore {
         (request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
          request.resource.data.players.get(request.auth.uid, null) != null)
       );
+      
+      // Deleting a session: Only the host (teacher) can delete their own session
+      allow delete: if request.auth != null && resource.data.hostId == request.auth.uid;
     }
   }
 }
