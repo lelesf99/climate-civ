@@ -588,12 +588,138 @@ h1 {
     transform: translateY(2px);
 }
 
-#wait-message {
-    text-align: center;
-    margin-top: 5rem;
+/* End Screen Analytics */
+#analytics-container {
+    width: 100%;
+    margin-bottom: 3rem;
+    background: rgba(15, 23, 42, 0.4);
+    padding: 1.5rem;
+    border: 1px solid var(--accent-color);
 }
 
-/* Score Popup Re-styled for multiplayer */
+#leaderboard-ranking {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.leader-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 4px solid var(--accent-color);
+}
+
+.leader-item.first {
+    border-color: var(--action-color);
+    background: rgba(153, 27, 27, 0.1);
+}
+
+#player-outcomes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.outcome-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #334155;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.outcome-card.winner {
+    border-color: var(--action-color);
+    box-shadow: 0 0 20px rgba(153, 27, 27, 0.2);
+}
+
+.outcome-rank {
+    font-family: var(--font-head);
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.outcome-score {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    color: var(--accent-secondary);
+}
+
+.outcome-status {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.outcome-desc {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: #94a3b8;
+}
+
+/* Restart Lobby */
+#player-ready-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.ready-card {
+    padding: 1rem;
+    border: 1px solid #334155;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.ready-card.ready {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--meter-good);
+    color: var(--meter-good);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+/* Player Rundown */
+#scenario-history {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 1rem 0;
+    padding-right: 10px;
+}
+
+.history-item {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    margin-bottom: 1rem;
+    border: 1px solid #334155;
+}
+
+.history-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent-color);
+}
+
+.history-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    font-size: 0.8rem;
+    gap: 1rem;
+}
+
+#player-ready-msg {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 2rem;
+    border: 2px dashed var(--meter-good);
+}
+
 #score-popup {
     position: fixed;
     top: 50%;
@@ -769,6 +895,21 @@ h1 {
     justify-content: space-between;
     width: 100%;
     margin-bottom: 5px;
+}
+
+.diff-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--meter-good);
+    border: 1px solid var(--meter-good);
+    border-radius: 4px;
+}
+
+.diff-badge.hard {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--meter-bad);
+    border-color: var(--meter-bad);
 }
 
 .player-score {
