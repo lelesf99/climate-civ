@@ -98,9 +98,38 @@
 
         <!-- END SCREEN -->
         <div id="end-screen" class="screen hidden">
-            <h1>RELATÓRIO FINAL</h1>
-            <div id="final-results"></div>
-            <button id="restart-btn" class="retro-btn">NOVA PARTIDA</button>
+            <h1>MISSIÃO CONCLUÍDA</h1>
+
+            <!-- Teacher specific end view -->
+            <div id="teacher-end-view" class="hidden">
+                <div id="analytics-container">
+                    <h2>ESTADO DA CIVILIZAÇÃO</h2>
+                    <div id="player-outcomes-grid">
+                        <!-- Individual player cards with status injected by JS -->
+                    </div>
+                </div>
+                <div id="restart-lobby">
+                    <h3>PREPARAÇÃO PARA NOVA MISSÃO</h3>
+                    <div id="player-ready-grid"></div>
+                    <button id="teacher-restart-btn" class="retro-btn" disabled>REINICIAR SISTEMAS</button>
+                </div>
+            </div>
+
+            <!-- Player specific end view -->
+            <div id="player-end-view" class="hidden">
+                <div id="personal-rundown">
+                    <h2>SEU DESEMPENHO</h2>
+                    <div id="player-score-banner"></div>
+                    <div id="scenario-history">
+                        <!-- History items injected by JS -->
+                    </div>
+                </div>
+                <button id="player-ready-btn" class="big-red-btn">QUERO JOGAR NOVAMENTE</button>
+                <div id="player-ready-msg" class="hidden">
+                    <p class="glitch">SINAL DE PRONTIDÃO ENVIADO</p>
+                    <p>Aguardando o professor e outros líderes...</p>
+                </div>
+            </div>
         </div>
     </div>
 

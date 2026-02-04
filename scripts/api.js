@@ -77,17 +77,39 @@ class FirebaseProxy {
         return code;
     }
 
-    async startNextScenario(scenarioId, playerUids = []) {
+    async startNextScenario(playerAssignments = {}) {
         const updates = {
-            scenarioId: scenarioId,
             status: 'active',
             timer: 90
         };
 
-        // Reset each player's status without wiping the whole list
-        playerUids.forEach(uid => {
+        // playerAssignments: { [uid]: scenarioId }
+        for (const uid in playerAssignments) {
+            updates[`players.${uid}.currentScenarioId`] = playerAssignments[uid];
             updates[`players.${uid}.submitted`] = false;
             updates[`players.${uid}.resources`] = {};
+            updates[`players.${uid}.readyToRestart`] = false;
+        }
+
+        await this.sessionRef.update(updates);
+    }
+
+    async resetSession(playerUids = []) {
+        const updates = {
+            status: 'waiting',
+            round: 1,
+            scenarioId: null,
+            timer: 90
+        };
+
+        playerUids.forEach(uid => {
+            updates[`players.${uid}.score`] = 0;
+            updates[`players.${uid}.submitted`] = false;
+            updates[`players.${uid}.resources`] = {};
+            updates[`players.${uid}.readyToRestart`] = false;
+            updates[`players.${uid}.history`] = [];
+            updates[`players.${uid}.difficulty`] = 'good';
+            updates[`players.${uid}.currentScenarioId`] = null;
         });
 
         await this.sessionRef.update(updates);
@@ -122,6 +144,12 @@ class FirebaseProxy {
         await this.sessionRef.update({
             [`players.${uid}.resources`]: resources,
             [`players.${uid}.submitted`]: true
+        });
+    }
+
+    async signalRestartReady(uid, status) {
+        await this.sessionRef.update({
+            [`players.${uid}.readyToRestart`]: status
         });
     }
 

@@ -43,9 +43,18 @@ class Game {
     }
 
     async startMission() {
-        const scenario = this.getNextScenario(1); // Start with Round 1
         const playerUids = Object.keys(this.syncData.players || {});
-        await api.startNextScenario(scenario.id, playerUids);
+        const assignments = {};
+
+        // Start with early-game category for everyone
+        const possible = GAME_DATA.scenarios.filter(s => s.category === 'early-game');
+
+        playerUids.forEach(uid => {
+            const randomScenario = possible[Math.floor(Math.random() * possible.length)];
+            assignments[uid] = randomScenario.id;
+        });
+
+        await api.startNextScenario(assignments);
     }
 
     getNextScenario(round) {
@@ -70,6 +79,11 @@ class Game {
 
     async submitAllocation(allocations) {
         this.ui.showPlayerWait("Decisão enviada! Analisando impacto...");
+        // Save current scenario ID used for scoring later
+        const player = this.syncData.players[this.uid];
+        await api.sessionRef.update({
+            [`players.${this.uid}.lastScenarioId`]: player.currentScenarioId
+        });
         await api.submitAllocation(this.uid, allocations);
     }
 
@@ -79,19 +93,32 @@ class Game {
         this.syncData = data;
 
         if (this.role === 'teacher') {
-            this.ui.renderTeacherDashboard(data);
-            if (data.status === 'active' && !this.timer) {
-                this.startRound(data.scenarioId);
-            }
-            if (this.allPlayersSubmitted(data.players) && data.status === 'active') {
-                this.endRound();
+            if (data.status === 'waiting') {
+                this.ui.showTeacherSetup();
+                this.ui.updateSessionDisplay(data.code);
+                this.ui.renderTeacherDashboard(data);
+                this.timer = null; // Ensure timer is clean
+            } else if (data.status === 'active') {
+                this.ui.renderTeacherDashboard(data);
+                if (!this.timer || this.currentScenario?.id !== data.scenarioId) {
+                    this.startRound(data.scenarioId);
+                }
+                if (this.allPlayersSubmitted(data.players)) {
+                    this.endRound();
+                }
+            } else if (data.status === 'finished') {
+                this.ui.renderEndScreen(data);
             }
         } else {
-            if (data.status === 'active' && this.currentScenario?.id !== data.scenarioId) {
-                this.startPlayerTurn(data.scenarioId);
-            }
-            if (data.status === 'finished') {
-                this.ui.showEndScreen(data.players);
+            const player = data.players[this.uid];
+            if (data.status === 'waiting') {
+                this.ui.showPlayerWait("Aguardando o professor iniciar...");
+            } else if (data.status === 'active') {
+                if (this.currentScenario?.id !== player.currentScenarioId) {
+                    this.startPlayerTurn(player.currentScenarioId);
+                }
+            } else if (data.status === 'finished') {
+                this.ui.renderEndScreen(data);
             }
         }
     }
@@ -103,10 +130,18 @@ class Game {
     }
 
     startRound(scenarioId) {
-        const scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
-        this.currentScenario = scenario;
+        // Teacher view shows round info and a generic status message
+        const roundNumber = this.syncData.round || 1;
+        const maxRounds = GAME_DATA.config.maxRounds;
+
+        let scenario = null;
+        // For early and endgame, show the specific scenario if it's unified (optional improvement)
+        if (roundNumber === 1 || roundNumber === maxRounds) {
+            scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
+        }
+
         this.timeLeft = GAME_DATA.config.timerSeconds;
-        this.ui.showTeacherGame(scenario);
+        this.ui.showTeacherGame(scenario, roundNumber);
         this.startTimer();
     }
 
@@ -138,25 +173,44 @@ class Game {
 
     async calculateResults() {
         const players = this.syncData.players;
-        const scenario = this.currentScenario;
         const updates = {};
 
         for (const uid in players) {
             const player = players[uid];
             if (!player.submitted) continue;
 
+            // Fetch the scenario this specific player just faced
+            const scenario = GAME_DATA.scenarios.find(s => s.id === player.currentScenarioId);
+            if (!scenario) continue;
+
             const score = this.calculateImpactScore(player.resources, scenario.initiatives);
             updates[`players.${uid}.score`] = (player.score || 0) + score;
+
+            // Adaptive Difficulty: Toggle 'good' or 'bad' for mid-game
+            let type = player.difficulty || 'good'; // Default to good path
+            if (score <= 60) type = 'bad';
+            else if (score >= 80) type = 'good';
+            updates[`players.${uid}.difficulty`] = type;
+
+            // Record history
+            const historyItem = {
+                scenarioId: scenario.id,
+                scenarioText: scenario.text,
+                resources: player.resources,
+                score: score,
+                initiatives: scenario.initiatives
+            };
+            updates[`players.${uid}.history`] = firebase.firestore.FieldValue.arrayUnion(historyItem);
+
             updates[`players.${uid}.submitted`] = false; // Reset for next turn
+            updates[`players.${uid}.resources`] = {};
         }
 
         await api.sessionRef.update(updates);
 
-        // Check if game ends
         if (this.syncData.round >= GAME_DATA.config.maxRounds) {
             await api.updateSessionStatus('finished');
         } else {
-            // Trigger next round after a delay?
             setTimeout(() => this.startNextRound(), 5000);
         }
     }
@@ -175,14 +229,65 @@ class Game {
     }
 
     async startNextRound() {
-        const nextRound = this.syncData.round + 1;
-        const scenarios = GAME_DATA.scenarios.filter(s => s.round === nextRound);
-        if (scenarios.length > 0) {
-            await api.sessionRef.update({ round: nextRound });
-            await api.startNextScenario(scenarios[0].id);
-        } else {
-            await api.updateSessionStatus('finished');
+        const nextRound = (this.syncData.round || 1) + 1;
+        const players = this.syncData.players;
+        const assignments = {};
+        const maxRounds = GAME_DATA.config.maxRounds;
+
+        const category = this.getCategoryForRound(nextRound, maxRounds);
+
+        for (const uid in players) {
+            const player = players[uid];
+            let type = player.difficulty || 'good';
+
+            // Branch for Round 5 based on performance (Score after 4 rounds)
+            if (category === 'endgame') {
+                const totalScore = player.score || 0;
+                // Thresholds scaled for up to 5 rounds (max 500 pts)
+                if (totalScore >= 350) type = 'utopia';
+                else if (totalScore >= 180) type = 'stability';
+                else type = 'collapse';
+            }
+
+            const possible = GAME_DATA.scenarios.filter(s => s.category === category && s.type === type);
+            if (possible.length > 0) {
+                const randomScenario = possible[Math.floor(Math.random() * possible.length)];
+                assignments[uid] = randomScenario.id;
+            } else {
+                // Fallback to any scenario in category if type not found
+                const fallback = GAME_DATA.scenarios.filter(s => s.category === category);
+                assignments[uid] = fallback.length > 0 ? fallback[Math.floor(Math.random() * fallback.length)].id : null;
+            }
         }
+
+        await api.sessionRef.update({ round: nextRound });
+        await api.startNextScenario(assignments);
+    }
+
+    getCategoryForRound(round, max) {
+        if (round === 1) return 'early-game';
+        if (round === max) return 'endgame';
+
+        // Distribution of mid-game rounds
+        if (max === 5) {
+            // For max=5: R2 is present, R3 and R4 are future.
+            return (round === 2) ? 'mid-game-present' : 'mid-game-future';
+        }
+
+        // Generic logic for other maxRound values
+        const midRounds = max - 2;
+        const currentMidIndex = round - 1; // Round 2 is 1st mid round
+        if (currentMidIndex <= Math.ceil(midRounds / 2)) return 'mid-game-present';
+        return 'mid-game-future';
+    }
+
+    async requestRestart() {
+        await api.signalRestartReady(this.uid, true);
+    }
+
+    async teacherRestart() {
+        const playerUids = Object.keys(this.syncData.players || {});
+        await api.resetSession(playerUids);
     }
 }
 
@@ -231,6 +336,17 @@ class UI {
         document.getElementById('mute-btn').addEventListener('click', () => {
             this.game.audio.toggleMute();
         });
+
+        // Restart flow
+        const playerReadyBtn = document.getElementById('player-ready-btn');
+        if (playerReadyBtn) {
+            playerReadyBtn.addEventListener('click', () => this.game.requestRestart());
+        }
+
+        const teacherRestartBtn = document.getElementById('teacher-restart-btn');
+        if (teacherRestartBtn) {
+            teacherRestartBtn.addEventListener('click', () => this.game.teacherRestart());
+        }
     }
 
     showTeacherSetup() {
@@ -264,19 +380,31 @@ class UI {
         // Game screen player status
         const grid = document.getElementById('player-status-grid');
         if (grid) {
-            grid.innerHTML = uids.map(uid => `
-                <div class="player-status-card ${players[uid].submitted ? 'submitted' : ''}">
-                    <span>${players[uid].name}</span>
-                    <div class="status-indicator"></div>
-                </div>
-            `).join('');
+            grid.innerHTML = uids.map(uid => {
+                const p = players[uid];
+                const isBad = p.difficulty === 'bad';
+                return `
+                    <div class="player-status-card ${p.submitted ? 'submitted' : ''}">
+                        <div class="card-header">
+                            <span>${p.name}</span>
+                            ${isBad ? '<span class="diff-badge hard">CRÍTICO</span>' : '<span class="diff-badge">ESTÁVEL</span>'}
+                        </div>
+                        <div class="player-score">${p.score || 0} PTS</div>
+                        <div class="status-indicator"></div>
+                    </div>
+                `;
+            }).join('');
         }
     }
 
-    showTeacherGame(scenario) {
+    showTeacherGame(scenario, round) {
         this.hideAll();
         document.getElementById('teacher-game-screen').classList.remove('hidden');
-        document.getElementById('scenario-text').innerText = scenario.text;
+        const roundInfo = GAME_DATA.rounds[round - 1];
+        document.getElementById('scenario-text').innerHTML = `
+            <div style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1rem;">ROUND ${round}: ${roundInfo.name}</div>
+            <p>${scenario ? scenario.text : "Os líderes estão enfrentando desafios adaptados às suas decisões anteriores. Monitore o progresso no painel abaixo."}</p>
+        `;
     }
 
     showPlayerInteraction(scenario) {
@@ -353,23 +481,91 @@ class UI {
         if (pDisplay) pDisplay.innerText = `${time}s`;
     }
 
-    showEndScreen(players) {
+    renderEndScreen(data) {
         this.hideAll();
-        const screen = document.getElementById('end-screen');
-        screen.classList.remove('hidden');
+        document.getElementById('end-screen').classList.remove('hidden');
 
-        const resultsDiv = document.getElementById('final-results');
+        const players = data.players || {};
+        if (this.game.role === 'teacher') {
+            this.renderTeacherEndView(players);
+        } else {
+            this.renderPlayerEndView(players[this.game.uid]);
+        }
+    }
+
+    renderTeacherEndView(players) {
+        document.getElementById('teacher-end-view').classList.remove('hidden');
+        document.getElementById('player-end-view').classList.add('hidden');
+
         const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
 
-        resultsDiv.innerHTML = sortedPlayers.map((p, i) => `
-            <div class="result-card" style="border-left: 5px solid ${i === 0 ? 'var(--accent-color)' : '#334155'}">
-                <h3>${i + 1}. ${p.name}</h3>
-                <p>Pontuação Final: <span class="score-highlight">${p.score}</span></p>
-                <div class="mini-bar-bg" style="width:100%; height:10px; background:#1e293b; margin-top:5px;">
-                    <div style="width:${Math.min(100, p.score / 10)}%; height:100%; background:var(--accent-color)"></div>
+        // Outcomes Grid
+        const grid = document.getElementById('player-outcomes-grid');
+        grid.innerHTML = sortedPlayers.map((p, i) => {
+            const status = this.getCivilizationStatus(p.score);
+            return `
+                <div class="outcome-card ${i === 0 ? 'winner' : ''}">
+                    <div class="outcome-rank">#${i + 1} ${p.name}</div>
+                    <div class="outcome-score">${p.score} PTS</div>
+                    <div class="outcome-status" style="color: ${status.color}">${status.label}</div>
+                    <p class="outcome-desc">${status.desc}</p>
+                </div>
+            `;
+        }).join('');
+
+        this.updateRestartLobby(players);
+    }
+
+    getCivilizationStatus(score) {
+        // Max score is 500 (5 rounds * 100)
+        if (score >= 400) return { label: "UTOPIA VERDE", color: "#10b981", desc: "Sua gestão alcançou o equilíbrio perfeito entre progresso e natureza." };
+        if (score >= 250) return { label: "ESTABILIDADE", color: "#34d399", desc: "A civilização sobreviveu aos desafios, mas com cicatrizes moderadas." };
+        if (score >= 150) return { label: "CRISE PERMANENTE", color: "#fbbf24", desc: "Recursos escassos e clima instável definem o novo normal." };
+        return { label: "COLAPSO TOTAL", color: "#ef4444", desc: "A falta de planejamento levou ao fim da sociedade como a conhecemos." };
+    }
+
+    updateRestartLobby(players) {
+        const grid = document.getElementById('player-ready-grid');
+        const uids = Object.keys(players);
+        grid.innerHTML = uids.map(uid => `
+            <div class="ready-card ${players[uid].readyToRestart ? 'ready' : ''}">
+                ${players[uid].name}<br>
+                <small>${players[uid].readyToRestart ? 'PRONTO' : 'VISUALIZANDO RESULTADOS'}</small>
+            </div>
+        `).join('');
+
+        const allReady = uids.length > 0 && uids.every(uid => players[uid].readyToRestart);
+        document.getElementById('teacher-restart-btn').disabled = !allReady;
+    }
+
+    renderPlayerEndView(playerData) {
+        if (!playerData) return;
+        document.getElementById('player-end-view').classList.remove('hidden');
+        document.getElementById('teacher-end-view').classList.add('hidden');
+
+        document.getElementById('player-score-banner').innerHTML = `
+            <h1 class="glitch" style="font-size: 3rem">${playerData.score}</h1>
+            <p>PONTUAÇÃO TOTAL ACUMULADA</p>
+        `;
+
+        const historyList = document.getElementById('scenario-history');
+        historyList.innerHTML = (playerData.history || []).map(h => `
+            <div class="history-item">
+                <h4>${h.scenarioText}</h4>
+                <div class="history-stats">
+                    <div>Status: ${h.score >= 50 ? 'SUCESSO' : 'REVISÃO NECESSÁRIA'}</div>
+                    <div>Precisão: ${h.score}%</div>
                 </div>
             </div>
         `).join('');
+
+        if (playerData.readyToRestart) {
+            document.getElementById('player-ready-btn').classList.add('hidden');
+            document.getElementById('player-ready-msg').classList.remove('hidden');
+        } else {
+            document.getElementById('player-ready-btn').classList.remove('hidden');
+            document.getElementById('player-ready-msg').classList.add('hidden');
+        }
     }
 
     hideAll() {
