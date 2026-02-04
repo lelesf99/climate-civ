@@ -70,22 +70,37 @@ class FirebaseProxy {
             scenarioId: null,
             timer: 90,
             players: {}, // [uid]: { name: '', resources: {}, score: 0, submitted: false }
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            // TTL: Delete session after 24 hours (for cleanup)
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
         };
 
         await this.sessionRef.set(sessionData);
         return code;
     }
 
-    async startNextScenario(playerAssignments = {}) {
+    async reconnectSession(code) {
+        this.sessionRef = this.db.collection('sessions').doc(code);
+        const doc = await this.sessionRef.get();
+
+        if (!doc.exists) {
+            throw new Error("Sessão não encontrada.");
+        }
+
+        this.role = 'teacher';
+        return code;
+    }
+
+    async startNextScenario(assignments = {}, round) {
         const updates = {
             status: 'active',
             timer: 90
         };
+        if (round) updates.round = round;
 
-        // playerAssignments: { [uid]: scenarioId }
-        for (const uid in playerAssignments) {
-            updates[`players.${uid}.currentScenarioId`] = playerAssignments[uid];
+        // assignments: { [uid]: scenarioId }
+        for (const uid in assignments) {
+            updates[`players.${uid}.currentScenarioId`] = assignments[uid];
             updates[`players.${uid}.submitted`] = false;
             updates[`players.${uid}.resources`] = {};
             updates[`players.${uid}.readyToRestart`] = false;
@@ -115,6 +130,23 @@ class FirebaseProxy {
         await this.sessionRef.update(updates);
     }
 
+    async cancelSession() {
+        console.log('Cancelando sessão...', this.sessionRef);
+        if (this.sessionRef) {
+            try {
+                await this.sessionRef.delete();
+                console.log('Sessão deletada do Firestore');
+                this.sessionRef = null;
+                this.role = null;
+            } catch (error) {
+                console.error('Erro ao deletar sessão:', error);
+                alert('Erro ao cancelar sessão: ' + error.message);
+            }
+        } else {
+            console.warn('Nenhuma sessão ativa para cancelar');
+        }
+    }
+
 
     // --- Player Methods ---
 
@@ -123,6 +155,15 @@ class FirebaseProxy {
         const doc = await this.sessionRef.get();
 
         if (!doc.exists) throw new Error("Sessão não encontrada.");
+
+        // Check player limit
+        const sessionData = doc.data();
+        const currentPlayerCount = Object.keys(sessionData.players || {}).length;
+        const MAX_PLAYERS = 6;
+
+        if (currentPlayerCount >= MAX_PLAYERS) {
+            throw new Error(`Sessão cheia! Máximo de ${MAX_PLAYERS} jogadores.`);
+        }
 
         const uid = (await this.login()).uid;
         this.role = 'player';
@@ -147,6 +188,15 @@ class FirebaseProxy {
         });
     }
 
+    async leaveSession(uid) {
+        if (!this.sessionRef) return;
+        await this.sessionRef.update({
+            [`players.${uid}`]: firebase.firestore.FieldValue.delete()
+        });
+        this.sessionRef = null;
+        this.role = null;
+    }
+
     async signalRestartReady(uid, status) {
         await this.sessionRef.update({
             [`players.${uid}.readyToRestart`]: status
@@ -160,6 +210,8 @@ class FirebaseProxy {
         this.unsubscribe = this.sessionRef.onSnapshot((doc) => {
             if (doc.exists) {
                 callback(doc.data());
+            } else {
+                callback(null); // Session deleted
             }
         });
     }

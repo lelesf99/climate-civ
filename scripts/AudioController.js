@@ -1,5 +1,6 @@
 class AudioController {
     constructor() {
+        this.isMuted = false;
         this.sounds = {
             'click': new Audio('assets/audio/click.mp3'),
             'success': new Audio('assets/audio/success.wav'),
@@ -38,16 +39,27 @@ class AudioController {
 
     play(key) {
         const audio = this.sounds[key];
-        audio.volume = audio.muted ? 0 : this.defaultVolumes[key];
+        if (!audio) return;
+
+        audio.volume = this.isMuted ? 0 : this.defaultVolumes[key];
+
+        // If it's a looping sound (background), don't clone it
+        if (audio.loop) {
+            if (audio.paused) {
+                audio.play().catch(e => console.warn("Audio play blocked", e));
+            }
+            return;
+        }
+
+        // For one-shot sounds, allow cloning for overlaps
         if (audio.ended || audio.paused) {
             audio.play().catch(e => console.warn("Audio play blocked", e));
         } else {
             const clone = audio.cloneNode();
-            clone.volume = audio.muted ? 0 : this.defaultVolumes[key];
+            clone.volume = this.isMuted ? 0 : this.defaultVolumes[key];
             clone.play().catch(e => console.warn("Audio play blocked", e));
             clone.onended = () => {
                 clone.remove();
-                console.log("Audio ended, clone removed");
             };
         }
     }
@@ -56,9 +68,11 @@ class AudioController {
     }
 
     toggleMute() {
+        this.isMuted = !this.isMuted;
         for (let key in this.sounds) {
-            this.sounds[key].muted = !this.sounds[key].muted;
-            this.sounds[key].volume = this.sounds[key].muted ? 0 : this.defaultVolumes[key];
+            this.sounds[key].muted = this.isMuted;
+            this.sounds[key].volume = this.isMuted ? 0 : this.defaultVolumes[key];
         }
+        return this.isMuted;
     }
 }

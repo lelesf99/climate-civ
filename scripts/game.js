@@ -37,10 +37,55 @@ class Game {
     // --- Teacher Actions ---
 
     async createSession() {
-        this.sessionCode = await api.createSession();
-        console.log(this.sessionCode);
-        this.ui.updateSessionDisplay(this.sessionCode);
-        api.onSessionUpdate((data) => this.handleSync(data));
+        const createBtn = document.getElementById('create-session-btn');
+        const backBtn = document.getElementById('back-to-role-btn');
+        const loading = document.getElementById('create-loading');
+
+        try {
+            if (createBtn) createBtn.disabled = true;
+            if (backBtn) backBtn.disabled = true;
+            if (loading) loading.classList.remove('hidden');
+
+            this.sessionCode = await api.createSession();
+            console.log(this.sessionCode);
+            this.ui.updateSessionDisplay(this.sessionCode);
+            api.onSessionUpdate((data) => this.handleSync(data));
+
+            // Hide the reconnect container on success
+            const reconnectContainer = document.querySelector('.reconnect-container');
+            if (reconnectContainer) reconnectContainer.classList.add('hidden');
+        } catch (e) {
+            alert(e.message);
+            if (createBtn) createBtn.disabled = false;
+            if (backBtn) backBtn.disabled = false;
+        } finally {
+            if (loading) loading.classList.add('hidden');
+        }
+    }
+
+    async reconnectSession(code) {
+        const reconnectBtn = document.getElementById('reconnect-session-btn');
+        const loading = document.getElementById('reconnect-loading');
+
+        try {
+            if (reconnectBtn) reconnectBtn.disabled = true;
+            if (loading) loading.classList.remove('hidden');
+
+            this.sessionCode = await api.reconnectSession(code);
+            this.role = 'teacher';
+            this.ui.updateSessionDisplay(this.sessionCode);
+
+            // Hide the reconnect container on success
+            const reconnectContainer = document.querySelector('.reconnect-container');
+            if (reconnectContainer) reconnectContainer.classList.add('hidden');
+
+            api.onSessionUpdate((data) => this.handleSync(data));
+        } catch (e) {
+            alert(e.message);
+            if (reconnectBtn) reconnectBtn.disabled = false;
+        } finally {
+            if (loading) loading.classList.add('hidden');
+        }
     }
 
     async startMission() {
@@ -56,6 +101,9 @@ class Game {
         });
 
         await api.startNextScenario(assignments);
+
+        // Teacher ambiance starts in Round 1
+        this.audio.play('ambiance');
     }
 
     getNextScenario(round) {
@@ -67,33 +115,121 @@ class Game {
     // --- Player Actions ---
 
     async joinMission(code, name) {
+        const joinBtn = document.getElementById('join-session-btn');
+        const backBtn = document.getElementById('back-to-role-btn');
+        const statusEl = document.getElementById('join-status');
+
         try {
+            if (joinBtn) joinBtn.disabled = true;
+            if (backBtn) backBtn.disabled = true;
+            if (statusEl) {
+                statusEl.innerText = "Conectando...";
+                statusEl.className = "";
+            }
+
             const { uid } = await api.joinSession(code, name);
             this.uid = uid;
             this.sessionCode = code;
-            this.ui.showPlayerWait("Aguardando o professor iniciar...");
-            api.onSessionUpdate((data) => this.handleSync(data));
+
+            if (statusEl) {
+                statusEl.innerText = "CONECTADO COM SUCESSO!";
+                statusEl.classList.add('success');
+            }
+
+            // Transition to lobby after a brief delay for success feedback
+            setTimeout(() => {
+                this.ui.showPlayerLobby();
+                api.onSessionUpdate((data) => this.handleSync(data));
+            }, 1000);
+        } catch (e) {
+            alert(e.message);
+            if (joinBtn) joinBtn.disabled = false;
+            if (backBtn) backBtn.disabled = false;
+            if (statusEl) statusEl.innerText = "";
+        }
+    }
+
+    async leaveMission() {
+        if (!confirm("Tem certeza que deseja sair desta sessão?")) return;
+        try {
+            await api.leaveSession(this.uid);
+            this.uid = null;
+            this.sessionCode = null;
+            this.ui.showRoleSelection();
         } catch (e) {
             alert(e.message);
         }
     }
 
+    async cancelSession() {
+        if (confirm("Tem certeza que deseja encerrar a sessão? Todos os jogadores serão desconectados.")) {
+            console.log('Iniciando cancelamento da sessão');
+            await api.cancelSession();
+            // The handleSync listener will detect the deletion and handle the UI transition
+            // This gives time for all players to be notified before local cleanup
+        }
+    }
+
+    async advanceFromResults() {
+        if (this.role !== 'teacher') return;
+
+        if (this.syncData.round >= GAME_DATA.config.maxRounds) {
+            // Game over - go to final results
+            await api.updateSessionStatus('finished');
+        } else {
+            // Continue to next round
+            await this.startNextRound();
+        }
+    }
+
     async submitAllocation(allocations) {
+        clearInterval(this.timer);
+        this.timer = null;
         this.ui.showPlayerWait("Decisão enviada! Analisando impacto...");
         // Save current scenario ID used for scoring later
         const player = this.syncData.players[this.uid];
         await api.sessionRef.update({
             [`players.${this.uid}.lastScenarioId`]: player.currentScenarioId
         });
+
+        this.audio.play('confirm');
         await api.submitAllocation(this.uid, allocations);
     }
 
     // --- Global Logic ---
 
     handleSync(data) {
+        console.log('handleSync chamado:', data);
+        if (!data) {
+            // Session deleted/cancelled
+            console.log('Sessão deletada detectada. Role:', this.role);
+            if (this.role === 'player') {
+                alert("A sessão foi encerrada pelo professor.");
+            }
+            this.sessionCode = null;
+            this.ui.showRoleSelection();
+            if (api.unsubscribe) api.unsubscribe();
+            return;
+        }
+
         this.syncData = data;
 
-        if (this.role === 'teacher') {
+        if (this.role === 'player') {
+            if (data.status === 'waiting') {
+                this.ui.renderPlayerLobby(data);
+                return;
+            }
+            const player = data.players[this.uid];
+            if (data.status === 'active') {
+                if (this.currentScenario?.id !== player.currentScenarioId) {
+                    this.startPlayerTurn(player.currentScenarioId);
+                }
+            } else if (data.status === 'results') {
+                this.ui.showRoundResults(data, player);
+            } else if (data.status === 'finished') {
+                this.ui.renderEndScreen(data);
+            }
+        } else { // teacher role
             if (data.status === 'waiting') {
                 this.ui.showTeacherSetup();
                 this.ui.updateSessionDisplay(data.code);
@@ -107,17 +243,8 @@ class Game {
                 if (this.allPlayersSubmitted(data.players)) {
                     this.endRound();
                 }
-            } else if (data.status === 'finished') {
-                this.ui.renderEndScreen(data);
-            }
-        } else {
-            const player = data.players[this.uid];
-            if (data.status === 'waiting') {
-                this.ui.showPlayerWait("Aguardando o professor iniciar...");
-            } else if (data.status === 'active') {
-                if (this.currentScenario?.id !== player.currentScenarioId) {
-                    this.startPlayerTurn(player.currentScenarioId);
-                }
+            } else if (data.status === 'results') {
+                this.ui.showTeacherResults(data);
             } else if (data.status === 'finished') {
                 this.ui.renderEndScreen(data);
             }
@@ -149,7 +276,9 @@ class Game {
     startPlayerTurn(scenarioId) {
         const scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
         this.currentScenario = scenario;
+        this.timeLeft = GAME_DATA.config.timerSeconds;
         this.ui.showPlayerInteraction(scenario);
+        this.startTimer();
     }
 
     startTimer() {
@@ -169,6 +298,13 @@ class Game {
         if (this.role === 'teacher') {
             await api.updateSessionStatus('results');
             this.calculateResults();
+        } else {
+            // Player side auto-submit if screen is open
+            const interactionScreen = document.getElementById('player-game-screen');
+            if (interactionScreen && !interactionScreen.classList.contains('hidden')) {
+                const allocations = this.ui.getCurrentAllocations();
+                await this.submitAllocation(allocations);
+            }
         }
     }
 
@@ -209,11 +345,8 @@ class Game {
 
         await api.sessionRef.update(updates);
 
-        if (this.syncData.round >= GAME_DATA.config.maxRounds) {
-            await api.updateSessionStatus('finished');
-        } else {
-            setTimeout(() => this.startNextRound(), 5000);
-        }
+        // Set status to 'results' to show round results screen
+        await api.updateSessionStatus('results');
     }
 
     calculateImpactScore(resources, initiatives) {
@@ -261,8 +394,10 @@ class Game {
             }
         }
 
-        await api.sessionRef.update({ round: nextRound });
-        await api.startNextScenario(assignments);
+        await api.startNextScenario(assignments, nextRound);
+
+        // Teacher ambiance starts
+        this.audio.play('ambiance');
     }
 
     getCategoryForRound(round, max) {
@@ -295,13 +430,31 @@ class Game {
 class UI {
     constructor(game) {
         this.game = game;
+        this.lastSoundRound = 0;
         this.initEventListeners();
     }
 
     initEventListeners() {
+        // Global Click Sound
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                this.game.audio.play('click');
+            }
+        });
+
         // Role Selection
         document.getElementById('teacher-role-btn').addEventListener('click', () => this.game.selectRole('teacher'));
         document.getElementById('player-role-btn').addEventListener('click', () => this.game.selectRole('player'));
+
+        // Return to selection
+        document.querySelectorAll('.return-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.showRoleSelection());
+        });
+
+        const cancelBtn = document.getElementById('cancel-session-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.game.cancelSession());
+        }
 
         // Teacher Setup
         const createBtn = document.getElementById('create-session-btn');
@@ -314,13 +467,33 @@ class UI {
             startBtn.addEventListener('click', () => this.game.startMission());
         }
 
-        // Player Join
-        const joinBtn = document.getElementById('join-session-btn');
-        if (joinBtn) {
-            joinBtn.addEventListener('click', () => {
+        const playerJoinBtn = document.getElementById('join-session-btn');
+        if (playerJoinBtn) {
+            playerJoinBtn.addEventListener('click', () => {
                 const code = document.getElementById('join-code-input').value;
                 const name = document.getElementById('player-name-input').value;
-                this.game.joinMission(code, name);
+                if (code.length === 4 && name.length >= 2) {
+                    this.game.joinMission(code, name);
+                } else {
+                    alert("Insira um código de 4 dígitos e um nome com pelo menos 2 letras.");
+                }
+            });
+        }
+
+        const leaveBtn = document.getElementById('leave-session-btn');
+        if (leaveBtn) {
+            leaveBtn.addEventListener('click', () => this.game.leaveMission());
+        }
+
+        const reconnectBtn = document.getElementById('reconnect-session-btn');
+        if (reconnectBtn) {
+            reconnectBtn.addEventListener('click', () => {
+                const code = document.getElementById('reconnect-code-input').value;
+                if (code.length === 4) {
+                    this.game.reconnectSession(code);
+                } else {
+                    alert("Por favor, insira um código de 4 dígitos.");
+                }
             });
         }
 
@@ -333,10 +506,25 @@ class UI {
             });
         }
 
-        // Mute
-        document.getElementById('mute-btn').addEventListener('click', () => {
-            this.game.audio.toggleMute();
+        // Spacebar shortcut for Presidential Button
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && submitBtn && !submitBtn.disabled) {
+                const resourceScreen = document.getElementById('resource-allocation-container');
+                if (resourceScreen && !resourceScreen.classList.contains('hidden')) {
+                    e.preventDefault(); // Prevent page scroll
+                    submitBtn.click();
+                }
+            }
         });
+
+        // Mute
+        const muteBtn = document.getElementById('mute-btn');
+        if (muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                const isMuted = this.game.audio.toggleMute();
+                muteBtn.innerText = isMuted ? '🔇' : '🔊';
+            });
+        }
 
         // Restart flow
         const playerReadyBtn = document.getElementById('player-ready-btn');
@@ -348,20 +536,60 @@ class UI {
         if (teacherRestartBtn) {
             teacherRestartBtn.addEventListener('click', () => this.game.teacherRestart());
         }
+
+        // Next Round button
+        const nextRoundBtn = document.getElementById('next-round-btn');
+        if (nextRoundBtn) {
+            nextRoundBtn.addEventListener('click', () => this.game.advanceFromResults());
+        }
+    }
+
+    showRoleSelection() {
+        this.hideAll();
+        document.getElementById('role-screen').classList.remove('hidden');
+        document.getElementById('role-screen').classList.add('active');
+
+        // Reset inputs
+        document.getElementById('join-code-input').value = '';
+        document.getElementById('player-name-input').value = '';
+        document.getElementById('reconnect-code-input').value = '';
+        document.getElementById('session-info').classList.add('hidden');
+        document.getElementById('teacher-initial-actions').classList.remove('hidden');
+        const backBtn = document.getElementById('back-to-role-btn');
+        if (backBtn) backBtn.classList.remove('hidden');
+
+        // Always ensure reconnect container is visible for teachers
+        const reconnectContainer = document.querySelector('.reconnect-container');
+        if (reconnectContainer) reconnectContainer.classList.remove('hidden');
     }
 
     showTeacherSetup() {
         this.hideAll();
         document.getElementById('teacher-setup-screen').classList.remove('hidden');
+        // Ensure buttons are in initial state if no session active
+        if (!this.game.sessionCode) {
+            document.getElementById('session-info').classList.add('hidden');
+            document.getElementById('teacher-initial-actions').classList.remove('hidden');
+        }
     }
 
     showPlayerJoin() {
         this.hideAll();
         document.getElementById('player-join-screen').classList.remove('hidden');
+        const statusEl = document.getElementById('join-status');
+        if (statusEl) {
+            statusEl.innerText = "";
+            statusEl.className = "";
+        }
+    }
+
+    showPlayerLobby() {
+        this.hideAll();
+        document.getElementById('player-lobby-screen').classList.remove('hidden');
     }
 
     updateSessionDisplay(code) {
-        document.getElementById('create-session-btn').classList.add('hidden');
+        document.getElementById('teacher-initial-actions').classList.add('hidden');
         document.getElementById('session-info').classList.remove('hidden');
         document.getElementById('session-code-display').innerText = code;
     }
@@ -370,18 +598,22 @@ class UI {
         const players = data.players || {};
         const uids = Object.keys(players);
 
-        // Setup screen player list
-        const list = document.getElementById('connected-players-list');
-        if (list) {
-            list.innerHTML = uids.map(uid => `<li>${players[uid].name}</li>`).join('');
+        // Setup screen player grid
+        const grid = document.getElementById('teacher-lobby-grid');
+        if (grid) {
+            grid.innerHTML = uids.map(uid => {
+                return `
+                    <div class="teacher-player-card">${players[uid].name}</div>
+                `;
+            }).join('');
             document.getElementById('player-count').innerText = uids.length;
             document.getElementById('start-game-btn').disabled = uids.length === 0;
         }
 
         // Game screen player status
-        const grid = document.getElementById('player-status-grid');
-        if (grid) {
-            grid.innerHTML = uids.map(uid => {
+        const gameGrid = document.getElementById('player-status-grid');
+        if (gameGrid) {
+            gameGrid.innerHTML = uids.map(uid => {
                 const p = players[uid];
                 const isBad = p.difficulty === 'bad';
                 return `
@@ -442,11 +674,41 @@ class UI {
         allSliders.forEach(s => total += parseInt(s.value));
 
         if (total > 100) {
-            let excess = total - 100;
-            const otherSliders = Array.from(allSliders).filter(s => s !== changedSlider && parseInt(s.value) > 0);
-            roundRobinIndex = (roundRobinIndex + 1) % otherSliders.length;
-            const sliderToReduce = otherSliders[roundRobinIndex];
-            sliderToReduce.value = parseInt(sliderToReduce.value) - Math.ceil(excess / otherSliders.length);
+            const others = Array.from(allSliders).filter(s => s !== changedSlider);
+            const othersTotal = others.reduce((sum, s) => sum + parseInt(s.value), 0);
+            const remainingPool = 100 - parseInt(changedSlider.value);
+
+            if (othersTotal > 0) {
+                // Calculate proportional values with fractional parts
+                const items = others.map(s => {
+                    const exact = (parseInt(s.value) / othersTotal) * remainingPool;
+                    return {
+                        slider: s,
+                        floorValue: Math.floor(exact),
+                        fraction: exact - Math.floor(exact)
+                    };
+                });
+
+                // Apply floor values
+                items.forEach(item => {
+                    item.slider.value = item.floorValue;
+                });
+
+                // Distribute remainder to those with largest fractional parts (fair rounding)
+                let currentTotal = parseInt(changedSlider.value) + items.reduce((sum, item) => sum + item.floorValue, 0);
+                let remainder = 100 - currentTotal;
+
+                if (remainder > 0) {
+                    // Sort by highest fraction to lowest
+                    items.sort((a, b) => b.fraction - a.fraction);
+                    for (let i = 0; i < remainder; i++) {
+                        const val = parseInt(items[i].slider.value);
+                        items[i].slider.value = val + 1;
+                    }
+                }
+            } else if (others.length > 0) {
+                others.forEach(s => s.value = 0);
+            }
         }
 
         this.updateSliderDisplays(allSliders);
@@ -471,9 +733,23 @@ class UI {
     }
 
     showPlayerWait(message) {
-        document.getElementById('resource-allocation-container').classList.add('hidden');
-        document.getElementById('wait-message').classList.remove('hidden');
-        document.getElementById('wait-message').querySelector('p').innerText = message;
+        // Redundant with lobby screen, but kept for partial compatibility
+        console.log("Player waiting:", message);
+    }
+
+    renderPlayerLobby(data) {
+        const lobbyScreen = document.getElementById('player-lobby-screen');
+        if (lobbyScreen.classList.contains('hidden')) {
+            this.hideAll();
+            lobbyScreen.classList.remove('hidden');
+        }
+
+        const players = data.players || {};
+        const uids = Object.keys(players);
+        const list = document.getElementById('lobby-players-list');
+        if (list) {
+            list.innerHTML = uids.map(uid => `<li>${players[uid].name}</li>`).join('');
+        }
     }
 
     updateTimer(time) {
@@ -551,15 +827,23 @@ class UI {
         `;
 
         const historyList = document.getElementById('scenario-history');
-        historyList.innerHTML = (playerData.history || []).map(h => `
-            <div class="history-item">
-                <h4>${h.scenarioText}</h4>
-                <div class="history-stats">
-                    <div>Status: ${h.score >= 50 ? 'SUCESSO' : 'REVISÃO NECESSÁRIA'}</div>
-                    <div>Precisão: ${h.score}%</div>
+        historyList.innerHTML = (playerData.history || []).map((h, i) => {
+            const isGood = h.score >= 50;
+            return `
+                <div class="history-item ${isGood ? 'good' : 'bad'}">
+                    <div class="history-index">MISSÃO 0${i + 1}</div>
+                    <div class="history-content">
+                        <div class="history-scenario">${h.scenarioText}</div>
+                        <div class="history-stats">
+                            <span class="history-badge ${isGood ? 'success' : 'fail'}">
+                                ${isGood ? 'SUCESSO' : 'CRÍTICO'}
+                            </span>
+                            <span class="history-precision">PRECISÃO: ${h.score}%</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         if (playerData.readyToRestart) {
             document.getElementById('player-ready-btn').classList.add('hidden');
@@ -570,8 +854,164 @@ class UI {
         }
     }
 
+    showRoundResults(data, player) {
+        this.hideAll();
+        document.getElementById('round-results-screen').classList.remove('hidden');
+
+        // Display round number
+        document.getElementById('results-round-number').innerText = data.round || 1;
+
+        // Get latest history entry (most recent round)
+        const history = player.history || [];
+        const lastRound = history[history.length - 1];
+        const roundScore = lastRound ? lastRound.score : 0;
+
+        // Display scores
+        document.getElementById('round-score').innerText = roundScore;
+        document.getElementById('total-score').innerText = player.score || 0;
+
+        // Generate performance feedback (without emojis)
+        const feedbackEl = document.getElementById('performance-feedback');
+        let feedbackText = '';
+        let feedbackClass = '';
+
+        // Play sound only once per round AND only if history is updated
+        const currentRound = data.round || 1;
+        const hasHistoryForRound = (player.history || []).length >= currentRound;
+
+        if (this.lastSoundRound !== currentRound && hasHistoryForRound) {
+            if (roundScore >= 85) {
+                this.game.audio.play('success');
+            } else if (roundScore >= 70) {
+                this.game.audio.play('success');
+            } else {
+                this.game.audio.play('fail');
+            }
+            this.lastSoundRound = currentRound;
+        }
+
+        if (roundScore >= 85) {
+            feedbackText = 'DECISÕES EXCELENTES!';
+            feedbackClass = 'excellent';
+        } else if (roundScore >= 70) {
+            feedbackText = 'BOAS ESCOLHAS';
+            feedbackClass = 'good';
+        } else if (roundScore >= 50) {
+            feedbackText = 'REVISÃO RECOMENDADA';
+            feedbackClass = 'poor';
+        } else {
+            feedbackText = 'IMPACTO CRÍTICO';
+            feedbackClass = 'critical';
+        }
+
+        feedbackEl.innerText = feedbackText;
+        feedbackEl.className = 'feedback-message ' + feedbackClass;
+
+        // Show initiative breakdown with precision
+        const breakdownEl = document.getElementById('initiative-breakdown');
+        if (lastRound && lastRound.initiatives) {
+            const initiativeHTML = lastRound.initiatives.map(init => {
+                const playerValue = lastRound.resources[init.id] || 0;
+                const ideal = init.ideal;
+
+                // Calculate deviation
+                const deviation = playerValue - ideal;
+
+                // Determine feedback text and rating
+                let feedbackText = '';
+                let rating = '';
+
+                if (Math.abs(deviation) <= 10) {
+                    feedbackText = 'Ideal';
+                    rating = 'excellent';
+                } else if (deviation > 10) {
+                    feedbackText = 'Sobrecarga';
+                    rating = deviation > 25 ? 'poor' : 'fair';
+                } else {
+                    feedbackText = 'Déficit';
+                    rating = deviation < -25 ? 'poor' : 'fair';
+                }
+
+                return `
+                    <div class="initiative-item ${rating}">
+                        <span class="initiative-name">${init.name}</span>
+                        <span class="initiative-precision ${rating}">${feedbackText}</span>
+                    </div>
+                `;
+            }).join('');
+
+            breakdownEl.innerHTML = `
+                <h3>Análise por Iniciativa</h3>
+                ${initiativeHTML}
+            `;
+        } else {
+            breakdownEl.innerHTML = '';
+        }
+    }
+
+    showTeacherResults(data) {
+        this.hideAll();
+        document.getElementById('teacher-results-screen').classList.remove('hidden');
+
+        // Display round number
+        document.getElementById('teacher-results-round-number').innerText = data.round || 1;
+
+        // Sort players by score (descending)
+        const players = data.players || {};
+        const playerArray = Object.keys(players).map(uid => ({
+            uid,
+            ...players[uid]
+        })).sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        // Generate player cards with rankings
+        const grid = document.getElementById('results-player-grid');
+        const rankingBadges = ['1º', '2º', '3º'];
+
+        grid.innerHTML = playerArray.map((player, index) => {
+            const history = player.history || [];
+            const lastRound = history[history.length - 1];
+            const roundScore = lastRound ? lastRound.score : 0;
+            const badge = index < 3 ? rankingBadges[index] : `#${index + 1}`;
+
+            return `
+                <div class="result-player-card">
+                    <div class="ranking-badge">${badge}</div>
+                    <div class="result-player-name">${player.name}</div>
+                    <div class="result-stats">
+                        <div class="result-stat-row">
+                            <span class="stat-label">Pontos da Rodada</span>
+                            <span class="stat-value">+${roundScore}</span>
+                        </div>
+                        <div class="result-stat-row">
+                            <span class="stat-label">Total Acumulado</span>
+                            <span class="stat-value">${player.score || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Update button text based on whether it's the last round
+        const nextBtn = document.getElementById('next-round-btn');
+        if (data.round >= GAME_DATA.config.maxRounds) {
+            nextBtn.innerText = 'VER RESULTADOS FINAIS';
+        } else {
+            nextBtn.innerText = 'PRÓXIMA RODADA';
+        }
+    }
+
     hideAll() {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+
+        // Ensure all buttons are re-enabled when changing screens
+        document.querySelectorAll('button').forEach(btn => {
+            btn.disabled = false;
+        });
+
+        // Hide any active loading indicators
+        document.querySelectorAll('.loading-container').forEach(loading => {
+            loading.classList.add('hidden');
+        });
     }
 }
 
