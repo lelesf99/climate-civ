@@ -13,6 +13,7 @@ class FirebaseProxy {
 
     async init(config) {
         // Use global config if not provided, for easy integration with external scripts
+        console.log("Detectando configuração do Firebase...", window.FIREBASE_CONFIG);
         const finalConfig = config && Object.keys(config).length > 0 ? config : window.FIREBASE_CONFIG;
 
         if (!finalConfig) {
@@ -56,12 +57,14 @@ class FirebaseProxy {
     // --- Teacher Methods ---
 
     async createSession() {
+        const user = await this.login();
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         this.sessionRef = this.db.collection('sessions').doc(code);
         this.role = 'teacher';
 
         const sessionData = {
             code: code,
+            hostId: user.uid,
             status: 'waiting', // waiting, active, results, finished
             round: 1,
             scenarioId: null,
@@ -74,21 +77,22 @@ class FirebaseProxy {
         return code;
     }
 
-    async startNextScenario(scenarioId) {
-        await this.sessionRef.update({
+    async startNextScenario(scenarioId, playerUids = []) {
+        const updates = {
             scenarioId: scenarioId,
             status: 'active',
-            timer: 90,
-            'players': this.resetPlayerSubmissions()
+            timer: 90
+        };
+
+        // Reset each player's status without wiping the whole list
+        playerUids.forEach(uid => {
+            updates[`players.${uid}.submitted`] = false;
+            updates[`players.${uid}.resources`] = {};
         });
+
+        await this.sessionRef.update(updates);
     }
 
-    resetPlayerSubmissions() {
-        // In Firestore we can't easily map over the 'players' object in a single update
-        // without knowing the keys, so we'll fetch or the game logic will handle it better.
-        // For now, let's assume the teacher triggers a reset.
-        return {}; // This is a placeholder, implementation will vary
-    }
 
     // --- Player Methods ---
 
@@ -100,6 +104,7 @@ class FirebaseProxy {
 
         const uid = (await this.login()).uid;
         this.role = 'player';
+        console.log(uid);
 
         await this.sessionRef.update({
             [`players.${uid}`]: {

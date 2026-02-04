@@ -37,13 +37,15 @@ class Game {
 
     async createSession() {
         this.sessionCode = await api.createSession();
+        console.log(this.sessionCode);
         this.ui.updateSessionDisplay(this.sessionCode);
         api.onSessionUpdate((data) => this.handleSync(data));
     }
 
     async startMission() {
         const scenario = this.getNextScenario(1); // Start with Round 1
-        await api.startNextScenario(scenario.id);
+        const playerUids = Object.keys(this.syncData.players || {});
+        await api.startNextScenario(scenario.id, playerUids);
     }
 
     getNextScenario(round) {

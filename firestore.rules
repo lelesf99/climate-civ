@@ -12,13 +12,13 @@ service cloud.firestore {
       
       // Updating a session:
       allow update: if request.auth != null && (
-        // Allow updating the status or scenarioId (Teacher/Logic)
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scenarioId', 'timer', 'round']) ||
+        // Only the session host can update the status, round, scenario, or timer
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scenarioId', 'timer', 'round']) && 
+         resource.data.hostId == request.auth.uid) ||
         
-        // Allow updating a specific player's data block
-        // Rule ensures a player can only edit their own UID key inside the 'players' map
-        request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
-        request.resource.data.players.get(request.auth.uid, null) != null
+        // Players can update their own data within the 'players' map
+        (request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
+         request.resource.data.players.get(request.auth.uid, null) != null)
       );
     }
   }
