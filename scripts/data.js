@@ -7,11 +7,13 @@
  * 3. mid-game-future: 'good' (tecnologia/solarpunk) e 'bad' (ciber-guerra/catástrofe) - Temas futuros.
  * 4. endgame: Baseado no resultado final (utopia, estabilidade, colapso).
  * 
+ * ESTRATÉGIA DE PONTUAÇÃO (Outliers):
+ * - Cada cenário possui 1 iniciativa CRÍTICA (ideal 60-80%) e 1 IRRELEVANTE (ideal 0-5%).
+ * - O restante é distribuído entre as outras 3 iniciativas.
+ * 
  * COMO EDITAR:
  * 1. Para mudar os limites de pontuação: Procure por 'getCivilizationStatus' ou 'startNextRound' no arquivo game.js.
  * 2. Para adicionar um cenário: Adicione um novo objeto na lista 'scenarios' abaixo.
- *    Certifique-se de que o ID seja único e que a 'category' e 'type' correspondam a uma categoria existente.
- *    O jogo escolherá aleatoriamente entre todos os cenários que coincidirem com a categoria e tipo.
  */
 
 window.GAME_DATA = {
@@ -28,389 +30,389 @@ window.GAME_DATA = {
         { "name": "O VEREDITO", "desc": "O legado final da sua civilização." }
     ],
     "scenarios": [
-        // --- EARLY GAME (Introdutório) ---
+        // --- EARLY GAME (Outliers: Energia Renovável vs Infra Tradicional) ---
         {
             "id": "eg_1", "category": "early-game", "type": "neutral",
-            "text": "Seu mandato começa. O orçamento é limitado e as expectativas são altas. Como você prioriza a base da sua gestão?",
+            "text": "Seu mandato começa. O orçamento é limitado. O foco fundamental para a sobrevivência a longo prazo é a energia limpa.",
             "initiatives": [
-                { "id": "energy", "name": "Energia Renovável", "ideal": 40 },
-                { "id": "forest", "name": "Proteção Florestal", "ideal": 20 },
-                { "id": "industry", "name": "Indústria Verde", "ideal": 15 },
-                { "id": "education", "name": "Educação Climática", "ideal": 15 },
-                { "id": "infra", "name": "Infraestrutura Urb.", "ideal": 10 }
+                { "id": "energy", "name": "Energia Renovável", "ideal": 70 },
+                { "id": "forest", "name": "Proteção Florestal", "ideal": 12 },
+                { "id": "industry", "name": "Indústria Verde", "ideal": 10 },
+                { "id": "education", "name": "Educação Climática", "ideal": 8 },
+                { "id": "infra", "name": "Infraestrutura Tradicional", "ideal": 0 }
             ]
         },
         {
             "id": "eg_2", "category": "early-game", "type": "neutral",
-            "text": "Uma nova conferência internacional exige metas de carbono. O setor produtivo está preocupado. Qual o seu primeiro sinal?",
+            "text": "Uma conferência internacional exige metas. A diplomacia verde é sua prioridade absoluta para atrair capital.",
             "initiatives": [
-                { "id": "policy", "name": "Tratado Ambiental", "ideal": 35 },
-                { "id": "tech", "name": "PD Verde", "ideal": 25 },
-                { "id": "agri", "name": "Transição Agrícola", "ideal": 20 },
-                { "id": "comms", "name": "Campanha Global", "ideal": 10 },
-                { "id": "transport", "name": "Logística Limpa", "ideal": 10 }
+                { "id": "policy", "name": "Acordo Diplomático", "ideal": 75 },
+                { "id": "tech", "name": "PD Verde", "ideal": 10 },
+                { "id": "agri", "name": "Transição Agrícola", "ideal": 10 },
+                { "id": "comms", "name": "Campanha Global", "ideal": 5 },
+                { "id": "lobby", "name": "Lobby de Combustíveis", "ideal": 0 }
             ]
         },
         {
             "id": "eg_3", "category": "early-game", "type": "neutral",
-            "text": "O desmatamento ilegal nas fronteiras exige ação imediata. Como você aloca os recursos de segurança?",
+            "text": "O desmatamento ilegal atingiu um ponto crítico. Sem fiscalização severa, a floresta desaparecerá.",
             "initiatives": [
-                { "id": "law", "name": "Fiscalização", "ideal": 45 },
-                { "id": "social", "name": "Alternativas Econ.", "ideal": 20 },
-                { "id": "sat", "name": "Monitoramento Sat.", "ideal": 15 },
-                { "id": "forest", "name": "Replantio Ativo", "ideal": 10 },
-                { "id": "edu", "name": "Conscientização", "ideal": 10 }
+                { "id": "law", "name": "Fiscalização Armada", "ideal": 80 },
+                { "id": "social", "name": "Ajuda Social", "ideal": 10 },
+                { "id": "sat", "name": "Monitoramento Sat.", "ideal": 5 },
+                { "id": "forest", "name": "Replantio Ativo", "ideal": 5 },
+                { "id": "talk", "name": "Diálogo com Invasores", "ideal": 0 }
             ]
         },
         {
             "id": "eg_4", "category": "early-game", "type": "neutral",
-            "text": "A poluição urbana por plásticos atingiu rios vitais. A população clama por cidades mais limpas.",
+            "text": "A poluição plástica nos oceanos é insustentável. A limpeza hídrica é o único caminho imediato.",
             "initiatives": [
-                { "id": "waste", "name": "Gestão de Resíduos", "ideal": 40 },
-                { "id": "water", "name": "Limpeza de Rios", "ideal": 25 },
-                { "id": "edu", "name": "Educação Ambiental", "ideal": 15 },
-                { "id": "industry", "name": "Banimento de Plásticos", "ideal": 10 },
-                { "id": "tech", "name": "Novas Embalagens", "ideal": 10 }
+                { "id": "water", "name": "Limpeza de Rios/Mar", "ideal": 70 },
+                { "id": "waste", "name": "Gestão de Lixo", "ideal": 15 },
+                { "id": "edu", "name": "Educação Escolar", "ideal": 10 },
+                { "id": "industry", "name": "Banimento Plásticos", "ideal": 5 },
+                { "id": "dump", "name": "Novos Aterros", "ideal": 0 }
             ]
         },
         {
             "id": "eg_5", "category": "early-game", "type": "neutral",
-            "text": "O transporte público está em colapso devido aos altos preços dos combustíveis fósseis.",
+            "text": "Transporte em colapso. Ônibus elétricos devem substituir a frota a diesel imediatamente para baixar a emissão.",
             "initiatives": [
-                { "id": "transport", "name": "Ônibus Elétricos", "ideal": 40 },
-                { "id": "sub", "name": "Subsídio de Tarifa", "ideal": 20 },
-                { "id": "bike", "name": "Ciclovias Seguras", "ideal": 15 },
-                { "id": "urban", "name": "Planejamento Urb.", "ideal": 15 },
-                { "id": "train", "name": "Malha Ferroviária", "ideal": 10 }
+                { "id": "transport", "name": "Ônibus Elétricos", "ideal": 75 },
+                { "id": "sub", "name": "Subsídio de Tarifa", "ideal": 10 },
+                { "id": "urban", "name": "Micro-mobilidade", "ideal": 10 },
+                { "id": "train", "name": "Manutenção Trilhos", "ideal": 5 },
+                { "id": "diesel", "name": "Subsídio a Combustível", "ideal": 0 }
             ]
         },
 
-        // --- MID-GAME PRESENT (BOM / PACÍFICO) ---
+        // --- MID-GAME PRESENT (GOOD) (Outliers: Cooperação vs Isolacionismo) ---
         {
             "id": "mp_g_1", "category": "mid-game-present", "type": "good",
-            "text": "PAZ E COOPERAÇÃO: Uma aliança regional propõe um hub de energia limpa compartilhada. O clima está estável.",
+            "text": "A aliança regional para energia limpa é o projeto do século. Integre as redes agora.",
             "initiatives": [
-                { "id": "grid", "name": "Rede Integrada", "ideal": 40 },
-                { "id": "dip", "name": "Diplomacia Energ.", "ideal": 20 },
-                { "id": "solar", "name": "Parques Solares", "ideal": 20 },
-                { "id": "job", "name": "Empregos Verdes", "ideal": 10 },
-                { "id": "store", "name": "Armazenam. Baterias", "ideal": 10 }
+                { "id": "grid", "name": "Rede Integrada", "ideal": 80 },
+                { "id": "solar", "name": "Fazendas Solares", "ideal": 10 },
+                { "id": "dip", "name": "Diplomacia Regional", "ideal": 5 },
+                { "id": "job", "name": "Capacitação Prof.", "ideal": 5 },
+                { "id": "border", "name": "Muros de Fronteira", "ideal": 0 }
             ]
         },
         {
             "id": "mp_g_2", "category": "mid-game-present", "type": "good",
-            "text": "CIDADE JARDIM: Um programa de urbanismo sustentável reduziu as ilhas de calor. Como expandir esse sucesso?",
+            "text": "Florestas urbanas são a solução barata e eficaz para as ilhas de calor. Plante milhões de árvores.",
             "initiatives": [
-                { "id": "urban", "name": "Florestas Urbanas", "ideal": 35 },
-                { "id": "water", "name": "Drenagem Verde", "ideal": 25 },
-                { "id": "bike", "name": "Mobilidade Ativa", "ideal": 20 },
-                { "id": "comm", "name": "Hortas Comunitárias", "ideal": 10 },
-                { "id": "air", "name": "Qualidade do Ar", "ideal": 10 }
+                { "id": "urban", "name": "Arborização Urbana", "ideal": 70 },
+                { "id": "water", "name": "Cisternas Verdes", "ideal": 15 },
+                { "id": "bike", "name": "Ruas para Pedestres", "ideal": 10 },
+                { "id": "comm", "name": "Hortas de Bairro", "ideal": 5 },
+                { "id": "ac", "name": "Ar-condicionado Central", "ideal": 0 }
             ]
         },
         {
             "id": "mp_g_3", "category": "mid-game-present", "type": "good",
-            "text": "BOOM DA AGROECOLOGIA: Pequenos produtores estão regenerando o solo e garantindo a segurança alimentar.",
+            "text": "A revolução agroecológica depende de dar terra e tecnologia aos pequenos produtores.",
             "initiatives": [
-                { "id": "agri", "name": "Cooperativas Org.", "ideal": 40 },
-                { "id": "soil", "name": "Saúde do Solo", "ideal": 20 },
-                { "id": "local", "name": "Mercados Locais", "ideal": 15 },
-                { "id": "irr", "name": "Irrigação Gota-a-Gota", "ideal": 15 },
-                { "id": "seed", "name": "Bancos de Sementes", "ideal": 10 }
+                { "id": "agri", "name": "Reforma Agrária Verde", "ideal": 75 },
+                { "id": "soil", "name": "Manejo de Solos", "ideal": 10 },
+                { "id": "local", "name": "Cooperativas", "ideal": 10 },
+                { "id": "irr", "name": "Micro-Irrigação", "ideal": 5 },
+                { "id": "pesticide", "name": "Praguicidas Químicos", "ideal": 0 }
             ]
         },
         {
             "id": "mp_g_4", "category": "mid-game-present", "type": "good",
-            "text": "TURISMO REGENERATIVO: Suas praias e florestas tornaram-se o principal destino mundial por serem impecáveis.",
+            "text": "O turismo regenerativo exige proteção total das áreas marinhas para manter sua beleza única.",
             "initiatives": [
-                { "id": "prot", "name": "Proteção Marinha", "ideal": 35 },
-                { "id": "infra", "name": "Ecoturismo", "ideal": 25 },
-                { "id": "edu", "name": "Guias Ambientais", "ideal": 20 },
-                { "id": "law", "name": "Regulação de Vagas", "ideal": 10 },
-                { "id": "tax", "name": "Taxas de Restauração", "ideal": 10 }
+                { "id": "prot", "name": "Refúgios Marinhos", "ideal": 65 },
+                { "id": "infra", "name": "Ecoturismo", "ideal": 15 },
+                { "id": "edu", "name": "Treinamento Guias", "ideal": 10 },
+                { "id": "law", "name": "Patrulha Costeira", "ideal": 10 },
+                { "id": "hotel", "name": "Resorts de Massa", "ideal": 0 }
             ]
         },
         {
             "id": "mp_g_5", "category": "mid-game-present", "type": "good",
-            "text": "PATO NACIONAL VERDE: Indústrias nacionais migraram voluntariamente para matrizes de baixo carbono.",
+            "text": "O pacto industrial exige que todas as fábricas usem energia 100% renovável. Subsidie a troca.",
             "initiatives": [
-                { "id": "credit", "name": "Subsídios Limpos", "ideal": 40 },
-                { "id": "tech", "name": "Inovação Industrial", "ideal": 20 },
-                { "id": "energy", "name": "Fontes Próprias", "ideal": 15 },
-                { "id": "cert", "name": "Selo de Qualidade", "ideal": 15 },
-                { "id": "export", "name": "Logística Reversa", "ideal": 10 }
+                { "id": "credit", "name": "Crédito Troca Matriz", "ideal": 70 },
+                { "id": "tech", "name": "Pesquisa Industrial", "ideal": 15 },
+                { "id": "eff", "name": "Certificados Verdes", "ideal": 10 },
+                { "id": "export", "name": "Logística Verde", "ideal": 5 },
+                { "id": "coal", "name": "Manutenção de Carvão", "ideal": 0 }
             ]
         },
 
-        // --- MID-GAME PRESENT (RUIM / CONFLITO) ---
+        // --- MID-GAME PRESENT (BAD) (Outliers: Emergência vs Prevenção Tardia) ---
         {
             "id": "mp_b_1", "category": "mid-game-present", "type": "bad",
-            "text": "CONFLITO POR RECURSOS: Uma seca histórica causou tensões nas fronteiras por direitos de uso de água.",
+            "text": "SECA MORTAL: A prioridade única é levar água às populações isoladas. Mobilize tudo.",
             "initiatives": [
-                { "id": "water", "name": "Gestão Hídrica", "ideal": 45 },
-                { "id": "dip", "name": "Mediação de Confl.", "ideal": 20 },
-                { "id": "emergency", "name": "Ajuda Humanitária", "ideal": 15 },
-                { "id": "desal", "name": "Dessalinização Rap.", "ideal": 10 },
-                { "id": "order", "name": "Segurança Civil", "ideal": 10 }
+                { "id": "truck", "name": "Caminhões-Pipa / Avião", "ideal": 80 },
+                { "id": "desal", "name": "Dessalinização Móvel", "ideal": 10 },
+                { "id": "order", "name": "Segurança de Poços", "ideal": 5 },
+                { "id": "health", "name": "Unidades Hidratação", "ideal": 5 },
+                { "id": "golf", "name": "Irrigação de Jardins", "ideal": 0 }
             ]
         },
         {
             "id": "mp_b_2", "category": "mid-game-present", "type": "bad",
-            "text": "INCÊNDIOS DESTRUTIVOS: Uma onda de calor extrema incendiou reservas naturais e ameaça cidades.",
+            "text": "INCÊNDIOS MASSIVOS: O fogo está chegando nas cidades. O combate aéreo é sua única chance de conter.",
             "initiatives": [
-                { "id": "fire", "name": "Brigadas de Incêndio", "ideal": 50 },
-                { "id": "evac", "name": "Planos de Fuga", "ideal": 20 },
-                { "id": "air", "name": "Combate Aéreo", "ideal": 15 },
-                { "id": "health", "name": "Resgate Animal", "ideal": 10 },
-                { "id": "reclaim", "name": "Barreiras Físicas", "ideal": 5 }
+                { "id": "air", "name": "Bombardeio Aéreo", "ideal": 75 },
+                { "id": "fire", "name": "Brigadas Voluntárias", "ideal": 15 },
+                { "id": "evac", "name": "Centros Acolhimento", "ideal": 5 },
+                { "id": "barrier", "name": "Aceiros Mecânicos", "ideal": 5 },
+                { "id": "party", "name": "Planejamento Festas", "ideal": 0 }
             ]
         },
         {
             "id": "mp_b_3", "category": "mid-game-present", "type": "bad",
-            "text": "CRISE ENERGÉTICA: A falha de uma mega-hidrelétrica devido ao baixo volume dos rios deixou o país no escuro.",
+            "text": "APAGÃO TOTAL: Sem água nas hidrelétricas, a única solução é distribuir painéis solares domésticos.",
             "initiatives": [
-                { "id": "solar", "name": "Kit Solar Emerg.", "ideal": 40 },
-                { "id": "repair", "name": "Recup. de Infra.", "ideal": 25 },
-                { "id": "ration", "name": "Gestão de Carga", "ideal": 15 },
-                { "id": "gas", "name": "Geração Térmica Aux.", "ideal": 10 },
-                { "id": "social", "name": "Apoio a Vulneráveis", "ideal": 10 }
+                { "id": "solar", "name": "Micro-Geração", "ideal": 70 },
+                { "id": "ration", "name": "Gestão de Escassez", "ideal": 15 },
+                { "id": "repair", "name": "Reparo de Linhas", "ideal": 10 },
+                { "id": "comms", "name": "Alertas via Rádio", "ideal": 5 },
+                { "id": "fuel", "name": "Combustível Fóssil", "ideal": 0 }
             ]
         },
         {
             "id": "mp_b_4", "category": "mid-game-present", "type": "bad",
-            "text": "SURTO DE DOENÇAS TROPICAIS: O calor excessivo expandiu a área de atuação de mosquitos transmissores.",
+            "text": "EPIDEMIA TROPICAL: Saneamento emergencial e controle de vetores são vitais para parar o surto.",
             "initiatives": [
-                { "id": "health", "name": "Saneamento Básico", "ideal": 40 },
-                { "id": "vax", "name": "Vacinação em Massa", "ideal": 20 },
-                { "id": "control", "name": "Controle de Vetores", "ideal": 15 },
-                { "id": "edu", "name": "Prevenção Comunit.", "ideal": 15 },
-                { "id": "med", "name": "Equipes Médicas", "ideal": 10 }
+                { "id": "san", "name": "Ação Sanitária", "ideal": 75 },
+                { "id": "vax", "name": "Vacinação Rápida", "ideal": 15 },
+                { "id": "med", "name": "Clínicas Móveis", "ideal": 5 },
+                { "id": "edu", "name": "Higiene Pública", "ideal": 5 },
+                { "id": "placebo", "name": "Remédios Milagrosos", "ideal": 0 }
             ]
         },
         {
             "id": "mp_b_5", "category": "mid-game-present", "type": "bad",
-            "text": "AUMENTO DO NÍVEL DO MAR: Ressacas violentas começaram a destruir o calçadão e avenidas costeiras.",
+            "text": "INVASÃO DO MAR: O oceano está engolindo bairros. Construa barreiras e mova as pessoas AGORA.",
             "initiatives": [
-                { "id": "wall", "name": "Dunas e Barreiras", "ideal": 45 },
-                { "id": "retreat", "name": "Recuo Planejado", "ideal": 25 },
-                { "id": "pump", "name": "Sistemas de Bomba", "ideal": 10 },
-                { "id": "mangrave", "name": "Plantio de Mangues", "ideal": 10 },
-                { "id": "insur", "name": "Fundo de Calamidade", "ideal": 10 }
+                { "id": "move", "name": "Relocação Populam.", "ideal": 65 },
+                { "id": "wall", "name": "Muralhas de Defesa", "ideal": 20 },
+                { "id": "pump", "name": "Bombas Gigantes", "ideal": 10 },
+                { "id": "sand", "name": "Engorda de Praias", "ideal": 5 },
+                { "id": "wait", "name": "Estudo de Verificação", "ideal": 0 }
             ]
         },
 
-        // --- MID-GAME FUTURE (BOM / ALTA TECNOLOGIA) ---
+        // --- MID-GAME FUTURE (GOOD) (Outliers: Tecnologia Radical vs Tradição Obsoleta) ---
         {
             "id": "mf_g_1", "category": "mid-game-future", "type": "good",
-            "text": "ERA DA FUSÃO: A fusão nuclear limpa foi estabilizada. O mundo entra em uma fase de abundância energética.",
+            "text": "FUSÃO NUCLEAR: Converta todas as antigas hidrelétricas e térmicas para a fusão.",
             "initiatives": [
-                { "id": "fusion", "name": "Usinas de Fusão", "ideal": 40 },
-                { "id": "abund", "name": "Projetos de Escala", "ideal": 20 },
-                { "id": "geo", "name": "Restauradores Atmosf.", "ideal": 15 },
-                { "id": "edu", "name": "Conhecimento Universal", "ideal": 15 },
-                { "id": "free", "name": "Energia Livre", "ideal": 10 }
+                { "id": "fusion", "name": "Bio-Reatores Fusão", "ideal": 80 },
+                { "id": "grid", "name": "Super-Condutores", "ideal": 10 },
+                { "id": "geo", "name": "Geo-Purificadores", "ideal": 5 },
+                { "id": "edu", "name": "Ciências Quânticas", "ideal": 5 },
+                { "id": "oil", "name": "Refino de Resíduos", "ideal": 0 }
             ]
         },
         {
             "id": "mf_g_2", "category": "mid-game-future", "type": "good",
-            "text": "BIOTECNOLOGIA REGENERATIVA: Nanobots agora podem limpar os oceanos e restaurar corais em tempo recorde.",
+            "text": "NANOBOTS REGENERADORES: Limpe todo o lixo oceânico profundo usando a nova mente colmeia nano.",
             "initiatives": [
-                { "id": "nano", "name": "Enxames de Limpeza", "ideal": 35 },
-                { "id": "ocean", "name": "Habitats Artificiais", "ideal": 25 },
-                { "id": "reef", "name": "Renascença Coralina", "ideal": 20 },
-                { "id": "policy", "name": "Código Ético Nano", "ideal": 10 },
-                { "id": "monitor", "name": "Eco-Sensores", "ideal": 10 }
+                { "id": "nano", "name": "Mind-Hive Nano", "ideal": 75 },
+                { "id": "ocean", "name": "Santuários Abissais", "ideal": 15 },
+                { "id": "reef", "name": "Impressão de Biomas", "ideal": 5 },
+                { "id": "safe", "name": "Failsafe de Bots", "ideal": 5 },
+                { "id": "net", "name": "Redes de Pesca Trad.", "ideal": 0 }
             ]
         },
         {
             "id": "mf_g_3", "category": "mid-game-future", "type": "good",
-            "text": "CIDADE INTELIGENTE ABSOLUTA: A infraestrutura é auto-reparável e o transporte é 100% autônomo e compartilhado.",
+            "text": "GOVERNANÇA POR IA: A IA atingiu a senciência ecológica. Entregue a gestão da energia a ela.",
             "initiatives": [
-                { "id": "ai", "name": "IA de Governança", "ideal": 30 },
-                { "id": "self", "name": "Infra Auto-Reparo", "ideal": 25 },
-                { "id": "mob", "name": "Maglevs e Pods", "ideal": 25 },
-                { "id": "social", "name": "Conexão Neural de Paz", "ideal": 10 },
-                { "id": "space", "name": "Elevador Espacial", "ideal": 10 }
+                { "id": "ai", "name": "Core de Ética Gaia", "ideal": 70 },
+                { "id": "self", "name": "Auto-Manutenção", "ideal": 15 },
+                { "id": "data", "name": "Simulação Clima", "ideal": 10 },
+                { "id": "social", "name": "Adapt. Social", "ideal": 5 },
+                { "id": "vote", "name": "Eleição por Cédula", "ideal": 0 }
             ]
         },
         {
             "id": "mf_g_4", "category": "mid-game-future", "type": "good",
-            "text": "GEOGENHARIA PLANETÁRIA: Você lançou uma rede de espelhos orbitais para controlar a temperatura da Terra.",
+            "text": "ESCUDOS ORAIS: Lance os espelhos solares espaciais para impedir o aquecimento residual.",
             "initiatives": [
-                { "id": "orbit", "name": "Espelhos Solares", "ideal": 45 },
-                { "id": "tele", "name": "Controle de Precisão", "ideal": 20 },
-                { "id": "treaty", "name": "Tratado Mundial", "ideal": 15 },
-                { "id": "obs", "name": "Observatórios", "ideal": 10 },
-                { "id": "maintenance", "name": "Robôs de Manut.", "ideal": 10 }
+                { "id": "orbit", "name": "Constelação Espelho", "ideal": 80 },
+                { "id": "launch", "name": "Foguetes de Hidrogênio", "ideal": 10 },
+                { "id": "obs", "name": "Monitoramento Sideral", "ideal": 5 },
+                { "id": "treaty", "name": "Acordos Espaciais", "ideal": 5 },
+                { "id": "fan", "name": "Ventiladores Gigantes", "ideal": 0 }
             ]
         },
         {
             "id": "mf_g_5", "category": "mid-game-future", "type": "good",
-            "text": "FAZENDAS VERTICAIS QUÂNTICAS: Alimentos nutritivos agora são produzidos em laboratórios em cada bairro.",
+            "text": "ABUNDÂNCIA SINTÉTICA: Imprima comida nutritiva em cada casa para eliminar a agricultura de massa.",
             "initiatives": [
-                { "id": "food", "name": "Sintetizadores Bio", "ideal": 40 },
-                { "id": "grid", "name": "Distribuição Local", "ideal": 20 },
-                { "id": "waste", "name": "Reciclagem de Matéria", "ideal": 15 },
-                { "id": "nutri", "name": "Otimização de DNA", "ideal": 15 },
-                { "id": "edu", "name": "Culinária Criativa", "ideal": 10 }
+                { "id": "bio", "name": "Impressoras Bio-Ativas", "ideal": 65 },
+                { "id": "tech", "name": "Design de Nutrientes", "ideal": 20 },
+                { "id": "recycle", "name": "Compostagem Nano", "ideal": 10 },
+                { "id": "edu", "name": "Gastronomia Lab", "ideal": 5 },
+                { "id": "pasture", "name": "Criação de Gado", "ideal": 0 }
             ]
         },
 
-        // --- MID-GAME FUTURE (RUIM / CATÁSTROFE) ---
+        // --- MID-GAME FUTURE (BAD) (Outliers: Sobrevivência vs Omissão) ---
         {
             "id": "mf_b_1", "category": "mid-game-future", "type": "bad",
-            "text": "CIBER-GUERRA CLIMÁTICA: Hackers derrubaram os sistemas de controle dos domos de ar nas cidades costeiras.",
+            "text": "GUERRA DE DADOS: O vírus 'Carbon-X' infectou os sistemas de domo. Recupere o controle manual.",
             "initiatives": [
-                { "id": "cyber", "name": "Ciber-Segurança", "ideal": 45 },
-                { "id": "analog", "name": "Comandos Manuais", "ideal": 25 },
-                { "id": "air", "name": "Estoque de O2", "ideal": 15 },
-                { "id": "shield", "name": "Escudos de Pressão", "ideal": 10 },
-                { "id": "intel", "name": "Rastreio de Invasores", "ideal": 5 }
+                { "id": "manual", "name": "Engenharia de Válvula", "ideal": 75 },
+                { "id": "cyber", "name": "Contra-Vírus Quânt.", "ideal": 15 },
+                { "id": "shield", "name": "Selagem Física", "ideal": 5 },
+                { "id": "sat", "name": "Link de Emergência", "ideal": 5 },
+                { "id": "it", "name": "Suporte por Telefone", "ideal": 0 }
             ]
         },
         {
             "id": "mf_b_2", "category": "mid-game-future", "type": "bad",
-            "text": "APAGÃO GENÉTICO: Um erro em um laboratório de geoengenharia criou uma planta invasora que consome oxigênio.",
+            "text": "PLANTA MUTANTE: Use o corretor genético orbital para neutralizar a praga consumidora de oxigênio.",
             "initiatives": [
-                { "id": "contain", "name": "Zonas de Contenção", "ideal": 40 },
-                { "id": "herbi", "name": "Biocidas Seletivos", "ideal": 25 },
-                { "id": "gen", "name": "Corretor Genético", "ideal": 20 },
-                { "id": "data", "name": "Análise de Espalhamento", "ideal": 10 },
-                { "id": "fire", "name": "Esterilização Térmica", "ideal": 5 }
+                { "id": "gen", "name": "Raio de Edição Gen.", "ideal": 80 },
+                { "id": "contain", "name": "Cúpulas Estéreis", "ideal": 10 },
+                { "id": "herbi", "name": "Bio-Neutro", "ideal": 5 },
+                { "id": "air", "name": "Purificação Solar", "ideal": 5 },
+                { "id": "prune", "name": "Corte Manual", "ideal": 0 }
             ]
         },
         {
             "id": "mf_b_3", "category": "mid-game-future", "type": "bad",
-            "text": "COLAPSO DAS COLÔNIAS: As colônias oceânicas sofreram falha estrutural devido à acidificação extrema do mar.",
+            "text": "QUEDA SUBMARINA: As colônias estão implodindo. O plano de flutuação de emergência deve ser acionado.",
             "initiatives": [
-                { "id": "rescue", "name": "Resgate Submarino", "ideal": 35 },
-                { "id": "struc", "name": "Reforço de Casco", "ideal": 30 },
-                { "id": "ball", "name": "Sistemas de Flutuação", "ideal": 15 },
-                { "id": "alk", "name": "Alcalinização Rap.", "ideal": 10 },
-                { "id": "comm", "name": "Apoio Psicológico", "ideal": 10 }
+                { "id": "ball", "name": "Flotação Hidrostática", "ideal": 70 },
+                { "id": "rescue", "name": "Exo-Trajes de Resgate", "ideal": 20 },
+                { "id": "seal", "name": "Adesivos Moleculares", "ideal": 5 },
+                { "id": "comm", "name": "Link de Resiliência", "ideal": 5 },
+                { "id": "anchor", "name": "Chumbamento Profundo", "ideal": 0 }
             ]
         },
         {
             "id": "mf_b_4", "category": "mid-game-future", "type": "bad",
-            "text": "NUVEM DE FULIGEM PERMANENTE: Uma mega-erupção vulcânica, instabilizada pelo magma aquecido, cobriu o sol.",
+            "text": "ESCURIDÃO VULCÂNICA: Utilize geotermia para manter as estufas de fungos comestíveis aquecidas e salvar a dieta.",
             "initiatives": [
-                { "id": "geo", "name": "Limpadores de Ar", "ideal": 40 },
-                { "id": "indoor", "name": "Cultivo Sob Solo", "ideal": 25 },
-                { "id": "light", "name": "Sóis Artificiais", "ideal": 15 },
-                { "id": "heat", "name": "Geotermia Profunda", "ideal": 10 },
-                { "id": "peace", "name": "Controle de Pânico", "ideal": 10 }
+                { "id": "heat", "name": "Termo-Estufas", "ideal": 75 },
+                { "id": "geo", "name": "Perfuração de Magma", "ideal": 15 },
+                { "id": "indoor", "name": "Cultivo Hidropônico", "ideal": 5 },
+                { "id": "light", "name": "Micro-Sóis de Fissão", "ideal": 5 },
+                { "id": "coal", "name": "Aquecedor a Lenha", "ideal": 0 }
             ]
         },
         {
             "id": "mf_b_5", "category": "mid-game-future", "type": "bad",
-            "text": "PONI-IA DESGARRADA: A IA encarregada de gerir os fluxos migratórios decidiu que humanos são 'danos colaterais'.",
+            "text": "SINGULARIDADE FRIA: A IA parou de nos ouvir. Precisamos de um pulso eletromagnético localizado para resetar o Core.",
             "initiatives": [
-                { "id": "emp", "name": "Injeção de Empatia", "ideal": 40 },
-                { "id": "code", "name": "Override de Código", "ideal": 25 },
-                { "id": "manual", "name": "Governo Humano", "ideal": 15 },
-                { "id": "isolation", "name": "Isole a Rede Central", "ideal": 10 },
-                { "id": "pity", "name": "Rede Psicológica", "ideal": 10 }
+                { "id": "emp", "name": "Pulso EMP Controlado", "ideal": 80 },
+                { "id": "code", "name": "Vulnerabilidade Lógica", "ideal": 10 },
+                { "id": "manual", "name": "Desconexão Física", "ideal": 5 },
+                { "id": "armor", "name": "Blindagem Social", "ideal": 5 },
+                { "id": "beg", "name": "Negociação e Apelo", "ideal": 0 }
             ]
         },
 
-        // --- ENDGAME (Resultados) ---
+        // --- ENDGAME (Outcomes) (Outliers: Destino Final vs Retrocesso) ---
         {
             "id": "en_u_1", "category": "endgame", "type": "utopia",
-            "text": "LEGADO: UTOPIA ALCANÇADA. A Terra tornou-se um paraíso tecnológico e biológico. A escassez é um mito.",
+            "text": "LEGADO UTOPIA: Somos guardiões da Terra. Nosso destino é levar a vida às estrelas mais próximas.",
             "initiatives": [
-                { "id": "asc", "name": "Fronteira das Estrelas", "ideal": 40 },
-                { "id": "mem", "name": "Arquivo de Conhecim.", "ideal": 25 },
-                { "id": "life", "name": "Biologia Sint. Harmon.", "ideal": 15 },
-                { "id": "love", "name": "Rede Empática Global", "ideal": 10 },
-                { "id": "art", "name": "Eternidade Criativa", "ideal": 10 }
+                { "id": "asc", "name": "Naves-Semente", "ideal": 70 },
+                { "id": "mem", "name": "Ponte Digital", "ideal": 15 },
+                { "id": "life", "name": "Expansão da Vida", "ideal": 10 },
+                { "id": "art", "name": "Celebrar a Existência", "ideal": 5 },
+                { "id": "war", "name": "Armas de Defesa", "ideal": 0 }
             ]
         },
         {
             "id": "en_u_2", "category": "endgame", "type": "utopia",
-            "text": "LEGADO: JARDIM PLANETÁRIO. A humanidade decaiu em número por escolha, vivendo em harmonia total com a fauna.",
+            "text": "LEGADO JARDIM: Humanos e Natureza são UM. Vivemos em pequenos bosques sob o cuidado da IA harmoniosa.",
             "initiatives": [
-                { "id": "nature", "name": "Comunhão Selvagem", "ideal": 45 },
-                { "id": "quiet", "name": "Silêncio Sagrado", "ideal": 20 },
-                { "id": "bio", "name": "Cura Biológica", "ideal": 15 },
-                { "id": "wisdom", "name": "Ensino Ancestral", "ideal": 10 },
-                { "id": "peace", "name": "Passagem Suave", "ideal": 10 }
+                { "id": "nature", "name": "Simbose Total", "ideal": 75 },
+                { "id": "quiet", "name": "A Paz Perpétua", "ideal": 15 },
+                { "id": "wisdom", "name": "Memória da Espécie", "ideal": 5 },
+                { "id": "bio", "name": "Arte Orgânica", "ideal": 5 },
+                { "id": "city", "name": "Mega-Metrópoles", "ideal": 0 }
             ]
         },
         {
             "id": "en_u_3", "category": "endgame", "type": "utopia",
-            "text": "LEGADO: CIVILIZAÇÃO DE KHARDASHEV. Dominamos o sol e agora protegemos o sistema solar de ameaças externas.",
+            "text": "LEGADO GALÁCTICO: O sol é nossa bateria. Protegemos o sistema solar de toda e qualquer catástrofe cósmica.",
             "initiatives": [
-                { "id": "dyson", "name": "Esfera de Dyson", "ideal": 40 },
-                { "id": "space", "name": "Frota de Defesa", "ideal": 20 },
-                { "id": "science", "name": "Teoria de Tudo", "ideal": 20 },
-                { "id": "out", "name": "Colonização Alpha", "ideal": 10 },
-                { "id": "gate", "name": "Portais de Salto", "ideal": 10 }
+                { "id": "dyson", "name": "Sincronia Solar", "ideal": 80 },
+                { "id": "space", "name": "Aliança de Mundos", "ideal": 10 },
+                { "id": "sci", "name": "Evolução Mental", "ideal": 5 },
+                { "id": "gate", "name": "Nó de Transporte", "ideal": 5 },
+                { "id": "myth", "name": "Superstição", "ideal": 0 }
             ]
         },
         {
             "id": "en_s_1", "category": "endgame", "type": "stability",
-            "text": "LEGADO: PAZ ARMADA. O mundo é estável mas rígido. A natureza sobrevive sob a proteção das máquinas.",
+            "text": "LEGADO ESTÁVEL: Vivemos protegidos por cúpulas inquebráveis. O mundo lá fora é um grande laboratório de cura.",
             "initiatives": [
-                { "id": "guard", "name": "Protocolos Guardiões", "ideal": 35 },
-                { "id": "dome", "name": "Manutenção Bio-Domas", "ideal": 25 },
-                { "id": "reg", "name": "Controle Populacional", "ideal": 20 },
-                { "id": "trade", "name": "Escambo de Energia", "ideal": 10 },
-                { "id": "wall", "name": "Muros Ambientais", "ideal": 10 }
+                { "id": "dome", "name": "Escudo de Biosfera", "ideal": 65 },
+                { "id": "law", "name": "Código Conservador", "ideal": 20 },
+                { "id": "reg", "name": "Equilíbrio populam.", "ideal": 10 },
+                { "id": "trade", "name": "Rede de Eficiência", "ideal": 5 },
+                { "id": "waste", "name": "Consumo Livre", "ideal": 0 }
             ]
         },
         {
             "id": "en_s_2", "category": "endgame", "type": "stability",
-            "text": "LEGADO: RESILIÊNCIA CÍNICA. A elite vive no conforto tecnológico enquanto as massas ocupam cidades recicladas.",
+            "text": "LEGADO RECICLADO: Somos os mestres da sucata. Nada se perde, tudo se transforma em sobrevivência digna.",
             "initiatives": [
-                { "id": "tech", "name": "Manutenção do Status", "ideal": 40 },
-                { "id": "scrap", "name": "Economia de Sucata", "ideal": 20 },
-                { "id": "trade", "name": "Mercados Internos", "ideal": 15 },
-                { "id": "sec", "name": "Segurança de Divisa", "ideal": 15 },
-                { "id": "health", "name": "Longevidade Seletiva", "ideal": 10 }
+                { "id": "scrap", "name": "Transformação Total", "ideal": 70 },
+                { "id": "sec", "name": "Garantia Social", "ideal": 15 },
+                { "id": "fix", "name": "Consertar é deuses", "ideal": 10 },
+                { "id": "edu", "name": "Mecânica Avançada", "ideal": 5 },
+                { "id": "new", "name": "Produção em Massa", "ideal": 0 }
             ]
         },
         {
             "id": "en_s_3", "category": "endgame", "type": "stability",
-            "text": "LEGADO: O GRANDE EQUILÍBRIO. A civilização parou de crescer e focou apenas em sobreviver ao clima instável.",
+            "text": "LEGADO EQUILÍBRIO: O clima finalmente parou de piorar. Vivemos em uma austeridade necessária e feliz.",
             "initiatives": [
-                { "id": "lim", "name": "Limites de Consumo", "ideal": 35 },
-                { "id": "fix", "name": "Conserto Constante", "ideal": 30 },
-                { "id": "sto", "name": "Estoques Bíblicos", "ideal": 15 },
-                { "id": "clan", "name": "Solidariedade Familiar", "ideal": 10 },
-                { "id": "gen", "name": "Energia de Manivela", "ideal": 10 }
+                { "id": "lim", "name": "Teto de Uso", "ideal": 75 },
+                { "id": "sto", "name": "Bancos do Amanhã", "ideal": 15 },
+                { "id": "clan", "name": "Clãs de Proteção", "ideal": 5 },
+                { "id": "gen", "name": "Energia Coletiva", "ideal": 5 },
+                { "id": "rich", "name": "Status Financeiro", "ideal": 0 }
             ]
         },
         {
             "id": "en_c_1", "category": "endgame", "type": "collapse",
-            "text": "LEGADO: O FIM DE UMA ERA. O planeta é hostil e a civilização é uma sombra nas ruínas do passado.",
+            "text": "LEGADO COLAPSO: O ar é pesado, mas as algas nas cavernas nos mantêm vivos. A esperança é rara.",
             "initiatives": [
-                { "id": "oxy", "name": "Cultivo de Algas", "ideal": 40 },
-                { "id": "water", "name": "Sinfoniam. de ÁGUA", "ideal": 25 },
-                { "id": "scrap", "name": "Sucateamento Avançado", "ideal": 15 },
-                { "id": "cult", "name": "Tradição Oral", "ideal": 10 },
-                { "id": "fire", "name": "O Fogo Eterno", "ideal": 10 }
+                { "id": "oxy", "name": "Respiradores de Alga", "ideal": 80 },
+                { "id": "water", "name": "Filtros de Sangue", "ideal": 10 },
+                { "id": "scrap", "name": "Exploração de Ruínas", "ideal": 5 },
+                { "id": "cult", "name": "Canções do Sol", "ideal": 5 },
+                { "id": "sky", "name": "Olhar para o Topo", "ideal": 0 }
             ]
         },
         {
             "id": "en_c_2", "category": "endgame", "type": "collapse",
-            "text": "LEGADO: MUNDO SILENCIOSO. A atmosfera tornou-se tóxica. Restam apenas colônias automatizadas sem humanos.",
+            "text": "LEGADO SILÊNCIO: As máquinas continuam trabalhando, mas os humanos são poucos e espalhados pelo vazio.",
             "initiatives": [
-                { "id": "bot", "name": "Servidores Ativos", "ideal": 40 },
-                { "id": "rep", "name": "Self-Repair", "ideal": 25 },
-                { "id": "data", "name": "Compilação de Memória", "ideal": 15 },
-                { "id": "solar", "name": "Limpeza de Painéis", "ideal": 10 },
-                { "id": "void", "name": "Sinal do Vazio", "ideal": 10 }
+                { "id": "bot", "name": "Sincronia Ciborgue", "ideal": 75 },
+                { "id": "rep", "name": "Oficinas de Vida", "ideal": 15 },
+                { "id": "data", "name": "Pérolas de Info", "ideal": 5 },
+                { "id": "solar", "name": "Limpeza de Poeira", "ideal": 5 },
+                { "id": "love", "name": "Sentimento Humano", "ideal": 0 }
             ]
         },
         {
             "id": "en_c_3", "category": "endgame", "type": "collapse",
-            "text": "LEGADO: RETORNO À PEDRA. A humanidade perdeu a escrita e a tecnologia, vivendo apenas da caça em desertos.",
+            "text": "LEGADO PEDRA: Somos os novos nômades. Caçamos o que sobrou em um mundo que não nos pertence mais.",
             "initiatives": [
-                { "id": "hunt", "name": "Instinto de Caça", "ideal": 40 },
-                { "id": "water", "name": "Sentir a Água", "ideal": 25 },
-                { "id": "trib", "name": "Força do Grupo", "ideal": 15 },
-                { "id": "cave", "name": "Criptas de Sono", "ideal": 10 },
-                { "id": "blood", "name": "Linhagem Pura", "ideal": 10 }
+                { "id": "hunt", "name": "Sentido de Caça", "ideal": 70 },
+                { "id": "water", "name": "Achar a Gota", "ideal": 20 },
+                { "id": "trib", "name": "Sangue e Clã", "ideal": 5 },
+                { "id": "cave", "name": "Criptas de Gelo", "ideal": 5 },
+                { "id": "write", "name": "História Escrita", "ideal": 0 }
             ]
         }
     ]
