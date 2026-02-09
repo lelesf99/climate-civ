@@ -221,7 +221,9 @@ class Game {
             }
             const player = data.players[this.uid];
             if (data.status === 'active') {
-                if (this.currentScenario?.id !== player.currentScenarioId) {
+                if (player.submitted) {
+                    this.ui.showPlayerWait("Aguardando outros líderes...");
+                } else if (this.currentScenario?.id !== player.currentScenarioId) {
                     this.startPlayerTurn(player.currentScenarioId);
                 }
             } else if (data.status === 'results') {
@@ -667,6 +669,9 @@ class UI {
         sliders.forEach(slider => {
             slider.addEventListener('input', () => this.balanceSliders(slider, sliders));
         });
+
+        // Initialize display
+        this.updateSliderDisplays(sliders);
     }
 
     balanceSliders(changedSlider, allSliders) {
@@ -733,8 +738,12 @@ class UI {
     }
 
     showPlayerWait(message) {
-        // Redundant with lobby screen, but kept for partial compatibility
-        console.log("Player waiting:", message);
+        document.getElementById('resource-allocation-container').classList.add('hidden');
+        const waitMsg = document.getElementById('wait-message');
+        waitMsg.classList.remove('hidden');
+        if (message) {
+            waitMsg.querySelector('p').innerText = message;
+        }
     }
 
     renderPlayerLobby(data) {
@@ -854,12 +863,25 @@ class UI {
         }
     }
 
+
+
+    animateValue(element, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = timestamp - startTimestamp;
+            const ratio = Math.min(progress / duration, 1);
+            element.innerText = Math.floor(ratio * (end - start) + start);
+            if (progress < duration) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
     showRoundResults(data, player) {
         this.hideAll();
         document.getElementById('round-results-screen').classList.remove('hidden');
-
-        // Display round number
-        document.getElementById('results-round-number').innerText = data.round || 1;
 
         // Get latest history entry (most recent round)
         const history = player.history || [];
@@ -867,8 +889,7 @@ class UI {
         const roundScore = lastRound ? lastRound.score : 0;
 
         // Display scores
-        document.getElementById('round-score').innerText = roundScore;
-        document.getElementById('total-score').innerText = player.score || 0;
+        this.animateValue(document.getElementById('total-score'), player.score - roundScore || 0, player.score, 1000);
 
         // Generate performance feedback (without emojis)
         const feedbackEl = document.getElementById('performance-feedback');
@@ -940,10 +961,7 @@ class UI {
                 `;
             }).join('');
 
-            breakdownEl.innerHTML = `
-                <h3>Análise por Iniciativa</h3>
-                ${initiativeHTML}
-            `;
+            breakdownEl.innerHTML = initiativeHTML;
         } else {
             breakdownEl.innerHTML = '';
         }

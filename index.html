@@ -197,8 +197,8 @@
                         <span class="btn-icon">●</span>
                     </button>
                     <div class="btn-label">
-                        <span class="btn-text">CONFIRMAR DECISÃO</span>
-                        <span class="key-hint">ESPAÇO</span>
+                        <span>CONFIRMAR DECISÃO <span class="key-hint">ESPAÇO</span></span>
+                        
                     </div>
                 </div>
             </div>
@@ -214,8 +214,8 @@
 
             <div class="player-feedback">
                 <div class="round-score-display">
-                    <span class="score-label">PONTOS GANHOS</span>
-                    <span id="round-score" class="score-value">0</span>
+                    <span class="score-label">PONTUAÇÃO TOTAL</span>
+                    <span id="total-score" class="score-value">0</span>
                 </div>
 
                 <div id="performance-feedback" class="feedback-message">
@@ -224,11 +224,6 @@
 
                 <div id="initiative-breakdown" class="initiative-breakdown">
                     <!-- Initiative precision details injected by JS -->
-                </div>
-
-                <div class="total-score-display">
-                    <span class="score-label">PONTUAÇÃO TOTAL</span>
-                    <span id="total-score" class="score-value">0</span>
                 </div>
 
                 <p class="waiting-text">Aguardando próxima rodada...</p>
@@ -270,7 +265,6 @@
             <!-- Player specific end view -->
             <div id="player-end-view" class="hidden">
                 <div id="personal-rundown">
-                    <h2>SEU DESEMPENHO</h2>
                     <div id="player-score-banner"></div>
                     <div id="scenario-history">
                         <!-- History items injected by JS -->
