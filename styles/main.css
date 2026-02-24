@@ -77,6 +77,14 @@ body {
     animation: slideIn .3s ease-out;
 }
 
+#player-lobby-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    animation: slideIn .3s ease-out;
+}
+
 .hidden {
     display: none !important;
 }
@@ -818,11 +826,6 @@ h1 {
 /* ==========================================================================
    8. TEACHER & PLAYER SCREENS
    ========================================================================== */
-#teacher-game-screen {
-    max-width: 1000px;
-    align-items: center;
-}
-
 .reconnect-container {
     display: flex;
     justify-content: center;

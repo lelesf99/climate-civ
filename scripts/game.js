@@ -1,3 +1,5 @@
+import { GlobeController } from './GlobeController.js';
+
 var roundRobinIndex = 0;
 class Game {
     constructor() {
@@ -14,12 +16,14 @@ class Game {
 
     async init() {
         this.ui = new UI(this);
+        this.globe = new GlobeController('globe-container');
 
-        // Firebase Config (Assuming user provides this or it's hardcoded for the demo)
+        // Firebase Config...
         // For now, we'll try to init with an empty config and let it fail gracefully if needed
         // but ideally the user should set this up.
         // I will wait for user to setup, but I can provide the structure.
         console.log("Game initialized. Waiting for role selection.");
+
     }
 
     // --- Role Management ---
@@ -92,18 +96,35 @@ class Game {
         const playerUids = Object.keys(this.syncData.players || {});
         const assignments = {};
 
+        // Assign unique continents
+        const continents = [...GAME_DATA.continents];
+        this.shuffleArray(continents);
+
         // Start with early-game category for everyone
         const possible = GAME_DATA.scenarios.filter(s => s.category === 'early-game');
 
-        playerUids.forEach(uid => {
+        playerUids.forEach((uid, index) => {
             const randomScenario = possible[Math.floor(Math.random() * possible.length)];
             assignments[uid] = randomScenario.id;
+
+            // Assign continent (cycling if more than 6 players, though limit is 6)
+            const continent = continents[index % continents.length];
+            api.sessionRef.update({
+                [`players.${uid}.continent`]: continent
+            });
         });
 
         await api.startNextScenario(assignments);
 
         // Teacher ambiance starts in Round 1
         this.audio.play('ambiance');
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
     }
 
     getNextScenario(round) {
@@ -207,6 +228,7 @@ class Game {
                 alert("A sessão foi encerrada pelo professor.");
             }
             this.sessionCode = null;
+            this.globe.stopCycling();
             this.ui.showRoleSelection();
             if (api.unsubscribe) api.unsubscribe();
             return;
@@ -260,12 +282,11 @@ class Game {
     }
 
     startRound(scenarioId) {
-        // Teacher view shows round info and a generic status message
+        // Teacher view shows round info
         const roundNumber = this.syncData.round || 1;
         const maxRounds = GAME_DATA.config.maxRounds;
 
         let scenario = null;
-        // For early and endgame, show the specific scenario if it's unified (optional improvement)
         if (roundNumber === 1 || roundNumber === maxRounds) {
             scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
         }
@@ -273,6 +294,27 @@ class Game {
         this.timeLeft = GAME_DATA.config.timerSeconds;
         this.ui.showTeacherGame(scenario, roundNumber);
         this.startTimer();
+
+        // Start cycling through ACTIVE players' continents
+        const activePlayers = Object.values(this.syncData.players || {});
+        const activeContinents = activePlayers
+            .filter(p => p.continent)
+            .map(p => p.continent);
+
+        if (activeContinents.length > 0) {
+            this.globe.startCycling(activeContinents, (continent) => {
+                this.ui.renderStatusCard(continent);
+                // Also update news feed with a relevant snippet for that continent occasionally
+                if (Math.random() > 0.3) {
+                    this.ui.updateNewsFeed(continent);
+                }
+            }, 8000);
+        }
+
+        // Start background news feed (general)
+        if (!this.newsInterval) {
+            this.newsInterval = setInterval(() => this.ui.updateNewsFeed(), 15000);
+        }
     }
 
     startPlayerTurn(scenarioId) {
@@ -295,11 +337,20 @@ class Game {
     }
 
     async endRound() {
+        if (this.isEnding) return;
+        this.isEnding = true;
+
         clearInterval(this.timer);
         this.timer = null;
+        this.globe.stopCycling();
+
         if (this.role === 'teacher') {
-            await api.updateSessionStatus('results');
-            this.calculateResults();
+            console.log("Hold on... Finalizing analysis for 5s.");
+            setTimeout(async () => {
+                await api.updateSessionStatus('results');
+                await this.calculateResults();
+                this.isEnding = false;
+            }, 5000);
         } else {
             // Player side auto-submit if screen is open
             const interactionScreen = document.getElementById('player-game-screen');
@@ -307,6 +358,7 @@ class Game {
                 const allocations = this.ui.getCurrentAllocations();
                 await this.submitAllocation(allocations);
             }
+            this.isEnding = false;
         }
     }
 
@@ -608,8 +660,10 @@ class UI {
                     <div class="teacher-player-card">${players[uid].name}</div>
                 `;
             }).join('');
-            document.getElementById('player-count').innerText = uids.length;
-            document.getElementById('start-game-btn').disabled = uids.length === 0;
+            const countEl = document.getElementById('player-count');
+            const startBtn = document.getElementById('start-game-btn');
+            if (countEl) countEl.innerText = uids.length;
+            if (startBtn) startBtn.disabled = uids.length === 0;
         }
 
         // Game screen player status
@@ -630,16 +684,72 @@ class UI {
                 `;
             }).join('');
         }
+
+        // Update News Feed if active
+        if (data.status === 'active' && !this.newsInterval) {
+            this.updateNewsFeed();
+        }
+    }
+
+    updateNewsFeed(specificContinent = null) {
+        const data = this.game.syncData;
+        if (!data || !data.players) return;
+
+        const uids = Object.keys(data.players);
+        if (uids.length === 0) return;
+
+        let continent = specificContinent;
+        let p = null;
+
+        if (continent) {
+            p = Object.values(data.players).find(player => player.continent === continent);
+        } else {
+            const randomUid = uids[Math.floor(Math.random() * uids.length)];
+            p = data.players[randomUid];
+            continent = p.continent || "Geral";
+        }
+
+        // Decide news type
+        let type = 'neutral';
+        if (p && p.difficulty === 'bad') type = 'bad';
+        else if (p && p.difficulty === 'good') type = 'good';
+
+        const templates = GAME_DATA.newsTemplates[type];
+        const template = templates[Math.floor(Math.random() * templates.length)];
+        const newsText = template.replace('{continent}', continent);
+
+        this.addNewsItem(continent, newsText);
+    }
+
+    addNewsItem(continent, text) {
+        const container = document.getElementById('news-ticker-track');
+        if (!container) return;
+
+        const item = document.createElement('div');
+        item.className = 'news-item';
+        item.innerHTML = `
+            <div class="news-dot"></div>
+            <span class="news-continent">[${continent}]</span>
+            <span class="news-text">${text}</span>
+        `;
+
+        container.appendChild(item);
+
+        // In a ticker, we keep a longer history of items for the loop
+        if (container.children.length > 20) {
+            container.removeChild(container.firstChild);
+        }
     }
 
     showTeacherGame(scenario, round) {
         this.hideAll();
         document.getElementById('teacher-game-screen').classList.remove('hidden');
+        document.getElementById('app').classList.add('clear-app');
         const roundInfo = GAME_DATA.rounds[round - 1];
-        document.getElementById('scenario-text').innerHTML = `
-            <div style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1rem;">ROUND ${round}: ${roundInfo.name}</div>
-            <p>${scenario ? scenario.text : "Os líderes estão enfrentando desafios adaptados às suas decisões anteriores. Monitore o progresso no painel abaixo."}</p>
-        `;
+        // document.getElementById('scenario-text').innerHTML = `
+        //     <div style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1rem;">ROUND ${round}: ${roundInfo.name}</div>
+        //     <p>${scenario ? scenario.text : "Os líderes estão enfrentando desafios adaptados às suas decisões anteriores. Monitore o progresso no painel abaixo."}</p>
+        // `;
     }
 
     showPlayerInteraction(scenario) {
@@ -1018,8 +1128,67 @@ class UI {
         }
     }
 
+    renderStatusCard(continent) {
+        const container = document.getElementById('status-card-container');
+        if (!container) return;
+
+        // Find player assigned to this continent
+        const players = Object.values(this.game.syncData?.players || {});
+        const p = players.find(player => player.continent === continent);
+
+        if (!p) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // Calculate a "Health/Stability" percentage based on score and round
+        // Score is cumulative, max round 5, max score 500.
+        // Approx health = (score / (currentRound * 100)) * 100
+        const currentRound = this.game.syncData?.round || 1;
+        const stability = Math.min(100, Math.max(10, Math.floor(((p.score || 0) + 50) / (currentRound * 120) * 100)));
+
+        const newCard = document.createElement('div');
+        newCard.className = 'status-card';
+        newCard.innerHTML = `
+            <div class="status-card-header">
+                <div>
+                    <div class="status-card-continent">${continent}</div>
+                    <div class="status-card-player">${p.name.toUpperCase()}</div>
+                </div>
+                <div class="status-card-score">
+                    <span class="score-num">${p.score || 0}</span>
+                    <span class="score-lbl">PONTOS</span>
+                </div>
+            </div>
+            <div class="status-card-body">
+                <div class="status-bar-container">
+                    <div class="status-bar-label">
+                        <span>ESTABILIDADE DA CIVILIZAÇÃO</span>
+                        <span>${stability}%</span>
+                    </div>
+                    <div class="status-bar-bg">
+                        <div class="status-bar-fill" style="width: ${stability}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Handle transition: fade out old card if exists
+        const oldCard = container.querySelector('.status-card');
+        if (oldCard) {
+            oldCard.classList.add('exit');
+            setTimeout(() => {
+                container.innerHTML = '';
+                container.appendChild(newCard);
+            }, 400);
+        } else {
+            container.appendChild(newCard);
+        }
+    }
+
     hideAll() {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById('app').classList.remove('clear-app');
 
         // Ensure all buttons are re-enabled when changing screens
         document.querySelectorAll('button').forEach(btn => {

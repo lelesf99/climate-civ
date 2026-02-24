@@ -22,6 +22,34 @@ window.GAME_DATA = {
         "timerSeconds": 90,
         "maxResources": 100
     },
+    "continents": [
+        "AMERICA DO NORTE",
+        "AMERICA DO SUL",
+        "EUROPA",
+        "AFRICA",
+        "ASIA",
+        "OCEANIA"
+    ],
+    "newsTemplates": {
+        "good": [
+            "Líderes de {continent} celebram recorde em energia limpa.",
+            "Índices de biodiversidade sobem em {continent}.",
+            "Economia verde em {continent} atrai novos investimentos.",
+            "População de {continent} apoia reformas sustentáveis."
+        ],
+        "bad": [
+            "Alerta vermelho em {continent}: Seca extrema atinge colheitas.",
+            "Protestos em {continent} por falta de recursos hídricos.",
+            "Queimadas em {continent} geram fumaça transfronteiriça.",
+            "Infraestrutura de {continent} em risco por eventos climáticos."
+        ],
+        "neutral": [
+            "Novos acordos comerciais em {continent} incluem cláusulas verdes.",
+            "Relatório da ONU sobre {continent} destaca desafios urbanos.",
+            "Conferência em {continent} discute o futuro do Ártico.",
+            "Fórum de economia em {continent} debate transição energética."
+        ]
+    },
     "rounds": [
         { "name": "DESPERTAR (2025)", "desc": "Assumindo o controle em um mundo em mutação." },
         { "name": "DESAFIOS DO AGORA", "desc": "Lidando com as realidades do presente." },
