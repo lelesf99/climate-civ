@@ -1,0 +1,13 @@
+{
+  "name": "climate-civ",
+  "version": "1.0.0",
+  "description": "Climate Civ Game",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "serve": "python -m http.server 8000"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
