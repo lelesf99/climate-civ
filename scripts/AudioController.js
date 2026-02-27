@@ -27,14 +27,6 @@ class AudioController {
 
         this.sounds.alarm.loop = true;
         this.sounds.ambiance.loop = true;
-
-        this.printVolumes();
-    }
-
-    printVolumes() {
-        for (let key in this.sounds) {
-            console.log(key, this.sounds[key].volume);
-        }
     }
 
     play(key) {

@@ -13,7 +13,6 @@ class FirebaseProxy {
 
     async init(config) {
         // Use global config if not provided, for easy integration with external scripts
-        console.log("Detectando configuração do Firebase...", window.FIREBASE_CONFIG);
         const finalConfig = config && Object.keys(config).length > 0 ? config : window.FIREBASE_CONFIG;
 
         if (!finalConfig) {
@@ -131,11 +130,9 @@ class FirebaseProxy {
     }
 
     async cancelSession() {
-        console.log('Cancelando sessão...', this.sessionRef);
         if (this.sessionRef) {
             try {
                 await this.sessionRef.delete();
-                console.log('Sessão deletada do Firestore');
                 this.sessionRef = null;
                 this.role = null;
             } catch (error) {
@@ -167,7 +164,6 @@ class FirebaseProxy {
 
         const uid = (await this.login()).uid;
         this.role = 'player';
-        console.log(uid);
 
         await this.sessionRef.update({
             [`players.${uid}`]: {
