@@ -143,10 +143,10 @@ export class GlobeController {
         fillLight.position.set(-5, 0, -5);
         this.scene.add(fillLight);
 
-        this.scene.fog = new THREE.Fog(0x476bbd, 100, 200);
-        this.scene.fog.color.set(0x476bbd);
+        this.scene.fog = new THREE.Fog(0x042a2f, 100, 200);
+        this.scene.fog.color.set(0x042a2f);
         this.scene.fog.density = 0.01;
-        this.scene.fog.fogColor = new THREE.Color(0x476bbd);
+        this.scene.fog.fogColor = new THREE.Color(0x042a2f);
         this.scene.fog.fogDensity = 0.01;
     }
 
