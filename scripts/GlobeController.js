@@ -11,7 +11,12 @@ export class GlobeController {
 
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance',
+            precision: 'mediump'
+        });
         this.globe = null;
         this.targetRotation = { x: 0, y: 0 };
         this.currentRotation = { x: 0, y: 0 };
@@ -20,16 +25,17 @@ export class GlobeController {
 
     init() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this.renderer.toneMapping = THREE.LinearToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.2;
         this.container.appendChild(this.renderer.domElement);
 
         this.camera.position.z = 150;
         this.camera.position.y = 50;
         this.camera.position.x = -25;
 
+        this.setupLights();
         this.loadGlobe('assets/3d/globe.glb');
 
         // Responsive
@@ -117,10 +123,31 @@ export class GlobeController {
             this.globe.scale.set(scale, scale, scale);
 
             this.scene.add(this.globe);
+
+            this.focusContinent('AMERICA DO SUL');
+            this.startCycling(['AMERICA DO SUL', 'EUROPA', 'AFRICA', 'ASIA', 'OCEANIA']);
+
+
             console.log("Custom globe loaded successfully:", path);
         }, undefined, (error) => {
             console.error("Error loading globe model:", error);
         });
+    }
+
+    setupLights() {
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        this.scene.add(ambientLight);
+
+        // Optional: Add a subtle fill light from the opposite side
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-5, 0, -5);
+        this.scene.add(fillLight);
+
+        this.scene.fog = new THREE.Fog(0x476bbd, 100, 200);
+        this.scene.fog.color.set(0x476bbd);
+        this.scene.fog.density = 0.01;
+        this.scene.fog.fogColor = new THREE.Color(0x476bbd);
+        this.scene.fog.fogDensity = 0.01;
     }
 
     focusContinent(continent = 'AMERICA DO SUL') {
