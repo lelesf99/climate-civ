@@ -45,8 +45,6 @@ export class GlobeController {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        this.setupDebugControls();
-
         this.animate();
     }
 
@@ -73,43 +71,9 @@ export class GlobeController {
             this.cycleInterval = null;
         }
     }
-
-    setupDebugControls() {
-        console.log("Globe Debug Controls Active:");
-        console.log("- Arrows: Rotate Globe");
-        console.log("- Enter: Print Coordinates");
-
-        window.addEventListener('keydown', (e) => {
-            // Skip if user is typing in an input
-            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
-            if (e.key === 'ArrowLeft') {
-                this.targetRotation.y -= 0.05;
-            }
-            if (e.key === 'ArrowRight') {
-                this.targetRotation.y += 0.05;
-            }
-            if (e.key === 'ArrowUp') {
-                this.targetRotation.x -= 0.05;
-            }
-            if (e.key === 'ArrowDown') {
-                this.targetRotation.x += 0.05;
-            }
-
-            if (e.key === 'Enter') {
-                console.log(`CURRENT CALIBRATION:`);
-                console.log(`Rotation: { x: ${this.targetRotation.x.toFixed(2)}, y: ${this.targetRotation.y.toFixed(2)} }`);
-            }
-        });
-    }
-
     // Load Blender Model
     loadGlobe(path) {
         const loader = new GLTFLoader();
-
-        // Handle texture loading errors
-        THREE.DefaultLoadingManager.onStart = (url) => console.log('Started loading:', url);
-        THREE.DefaultLoadingManager.onError = (url) => console.error('Failed to load resource:', url);
 
         loader.load(path, (gltf) => {
             if (this.globe) this.scene.remove(this.globe);
@@ -126,9 +90,6 @@ export class GlobeController {
 
             this.focusContinent('AMERICA DO SUL');
             this.startCycling(['AMERICA DO SUL', 'EUROPA', 'AFRICA', 'ASIA', 'OCEANIA']);
-
-
-            console.log("Custom globe loaded successfully:", path);
         }, undefined, (error) => {
             console.error("Error loading globe model:", error);
         });
@@ -163,7 +124,6 @@ export class GlobeController {
 
         const target = continentAngles[continent.toUpperCase()] || { x: 0, y: 0 };
         this.targetRotation = { x: target.x, y: target.y };
-        console.log(`Focusing ${continent}:`, target);
     }
 
     animate() {

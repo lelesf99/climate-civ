@@ -17,13 +17,6 @@ class Game {
     async init() {
         this.ui = new UI(this);
         this.globe = new GlobeController('globe-container');
-
-        // Firebase Config...
-        // For now, we'll try to init with an empty config and let it fail gracefully if needed
-        // but ideally the user should set this up.
-        // I will wait for user to setup, but I can provide the structure.
-        console.log("Game initialized. Waiting for role selection.");
-
     }
 
     // --- Role Management ---
@@ -51,7 +44,6 @@ class Game {
             if (loading) loading.classList.remove('hidden');
 
             this.sessionCode = await api.createSession();
-            console.log(this.sessionCode);
             this.ui.updateSessionDisplay(this.sessionCode);
             api.onSessionUpdate((data) => this.handleSync(data));
 
@@ -184,7 +176,6 @@ class Game {
 
     async cancelSession() {
         if (confirm("Tem certeza que deseja encerrar a sessão? Todos os jogadores serão desconectados.")) {
-            console.log('Iniciando cancelamento da sessão');
             await api.cancelSession();
             // The handleSync listener will detect the deletion and handle the UI transition
             // This gives time for all players to be notified before local cleanup
@@ -220,10 +211,8 @@ class Game {
     // --- Global Logic ---
 
     handleSync(data) {
-        console.log('handleSync chamado:', data);
         if (!data) {
             // Session deleted/cancelled
-            console.log('Sessão deletada detectada. Role:', this.role);
             if (this.role === 'player') {
                 alert("A sessão foi encerrada pelo professor.");
             }
@@ -345,7 +334,6 @@ class Game {
         this.globe.stopCycling();
 
         if (this.role === 'teacher') {
-            console.log("Hold on... Finalizing analysis for 5s.");
             setTimeout(async () => {
                 await api.updateSessionStatus('results');
                 await this.calculateResults();
