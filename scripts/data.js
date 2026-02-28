@@ -16,7 +16,7 @@
  * 2. Para adicionar um cenário: Adicione um novo objeto na lista 'scenarios' abaixo.
  */
 
-window.GAME_DATA = {
+export const GAME_DATA = {
     "config": {
         "maxRounds": 5,
         "timerSeconds": 90,

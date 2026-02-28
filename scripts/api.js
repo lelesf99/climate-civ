@@ -1,14 +1,19 @@
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+
 /**
  * Firebase API Wrapper for Climate Civ
  * Handles Authentication and Firestore sync for multiplayer sessions.
  */
-class FirebaseProxy {
+export class FirebaseProxy {
     constructor() {
         this.db = null;
         this.auth = null;
         this.sessionRef = null;
         this.unsubscribe = null;
         this.role = null; // 'teacher' or 'player'
+        this.onAuthCallback = null;
     }
 
     async init(config) {
@@ -34,29 +39,62 @@ class FirebaseProxy {
             return;
         }
 
-        if (!window.firebase) {
-            console.error("Firebase SDK not found!");
-            return;
-        }
+        // window.firebase check is not needed since we import it
 
         firebase.initializeApp(finalConfig);
         this.db = firebase.firestore();
         this.auth = firebase.auth();
     }
 
-    async login() {
+    onAuthStateChanged(callback) {
+        this.onAuthCallback = callback;
+        if (!this.auth) {
+            console.warn("api.onAuthStateChanged called before api.init(). Waiting...");
+            return null; // Or we could queue it, but usually Game.init should wait
+        }
+        return this.auth.onAuthStateChanged((user) => {
+            if (callback) callback(user);
+        });
+    }
+
+    async loginAnonymously() {
         try {
+            // If already logged in (as any provider), just return the user
+            if (this.auth.currentUser) return this.auth.currentUser;
+
             const user = await this.auth.signInAnonymously();
             return user.user;
         } catch (error) {
-            console.error("Auth error:", error);
+            console.error("Anonymous Auth error:", error);
+            throw error;
+        }
+    }
+
+    async loginTeacher(email, password) {
+        try {
+            const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
+            return userCredential.user;
+        } catch (error) {
+            console.error("Teacher Auth error:", error);
+            throw error;
+        }
+    }
+
+    async logout() {
+        try {
+            await this.auth.signOut();
+            this.role = null;
+        } catch (error) {
+            console.error("Logout error:", error);
         }
     }
 
     // --- Teacher Methods ---
 
     async createSession() {
-        const user = await this.login();
+        const user = this.auth.currentUser;
+        if (!user) throw new Error("Acesso negado: Professor não autenticado.");
+
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         this.sessionRef = this.db.collection('sessions').doc(code);
         this.role = 'teacher';
@@ -88,6 +126,28 @@ class FirebaseProxy {
 
         this.role = 'teacher';
         return code;
+    }
+
+    async getTeacherSessions() {
+        const user = this.auth.currentUser;
+        if (!user) return [];
+
+        const snapshot = await this.db.collection('sessions')
+            .where('hostId', '==', user.uid)
+            .get();
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })).sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+    }
+
+    async deleteSessionByCode(code) {
+        await this.db.collection('sessions').doc(code).delete();
+        if (this.sessionRef && this.sessionRef.id === code) {
+            this.sessionRef = null;
+            this.role = null;
+        }
     }
 
     async startNextScenario(assignments = {}, round) {
@@ -134,7 +194,7 @@ class FirebaseProxy {
             try {
                 await this.sessionRef.delete();
                 this.sessionRef = null;
-                this.role = null;
+                // Preserve role so UI knows we are still a teacher
             } catch (error) {
                 console.error('Erro ao deletar sessão:', error);
                 alert('Erro ao cancelar sessão: ' + error.message);
@@ -162,7 +222,7 @@ class FirebaseProxy {
             throw new Error(`Sessão cheia! Máximo de ${MAX_PLAYERS} jogadores.`);
         }
 
-        const uid = (await this.login()).uid;
+        const uid = (await this.loginAnonymously()).uid;
         this.role = 'player';
 
         await this.sessionRef.update({
@@ -217,4 +277,4 @@ class FirebaseProxy {
     }
 }
 
-window.api = new FirebaseProxy();
+export const api = new FirebaseProxy();

@@ -3,26 +3,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Match any session document
     match /sessions/{sessionId} {
-      
-      // Anyone can read a session if they have the ID (the 4-digit code)
+      // READ: Anyone can read a session if they have the ID (the 4-digit code)
       allow read: if true;
-      
-      // Creating a session: Allow anyone (anonymously authenticated)
-      allow create: if request.auth != null;
-      
-      // Updating a session:
+
+      // CREATE: Only teachers (email/password) can create sessions
+      allow create: if request.auth != null && 
+        request.auth.token.firebase.sign_in_provider == 'password' &&
+        request.resource.data.hostId == request.auth.uid;
+
+      // UPDATE: 
       allow update: if request.auth != null && (
-        // Session host can update game state and player outcomes
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scenarioId', 'timer', 'round', 'players']) && 
-         resource.data.hostId == request.auth.uid) ||
+        // 1. Teacher can update game state
+        (request.auth.token.firebase.sign_in_provider == 'password' && 
+         resource.data.hostId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scenarioId', 'timer', 'round', 'players'])) ||
         
-        // Players can update their own data within the 'players' map
+        // 2. Players (Anonymous or Password) can update their own data in 'players' map
         (request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
          request.resource.data.players.get(request.auth.uid, null) != null)
       );
-      
-      // Deleting a session: Only the host (teacher) can delete their own session
-      allow delete: if request.auth != null && resource.data.hostId == request.auth.uid;
+
+      // DELETE: Only the host (teacher) can delete their own session
+      allow delete: if request.auth != null && 
+        request.auth.token.firebase.sign_in_provider == 'password' && 
+        resource.data.hostId == request.auth.uid;
     }
   }
 }
