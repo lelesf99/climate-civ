@@ -1,7 +1,21 @@
+import { api } from './api.js';
+import { GAME_DATA } from './data.js';
+import { AudioController } from './AudioController.js';
 import { GlobeController } from './GlobeController.js';
+import { UI } from './UI.js';
+
+// Import Styles
+import '../styles/base.css';
+import '../styles/ui.css';
+import '../styles/effects.css';
+import '../styles/screens/landing.css';
+import '../styles/screens/teacher.css';
+import '../styles/screens/player.css';
+import '../styles/game.css';
+import '../styles/responsive.css';
 
 var roundRobinIndex = 0;
-class Game {
+export class Game {
     constructor() {
         this.role = null;
         this.uid = null;
@@ -17,21 +31,84 @@ class Game {
     async init() {
         this.ui = new UI(this);
         this.globe = new GlobeController('globe-container');
+
+        // Initialize Firebase early so auth listener works
+        const { FIREBASE_CONFIG } = await import('./firebase-config.js');
+        await api.init(FIREBASE_CONFIG);
+
+        // Listen for auth changes for persistence
+        api.onAuthStateChanged((user) => this.handleAuthStateChanged(user));
     }
 
     // --- Role Management ---
 
     async selectRole(role) {
         this.role = role;
-        await api.init({}); // Config should be here
+
         if (role === 'teacher') {
-            this.ui.showTeacherSetup();
+            const user = api.auth.currentUser;
+            // Only allow email/password users to skip login
+            if (user && user.providerData.some(p => p.providerId === 'password')) {
+                this.ui.showTeacherSetup();
+            } else {
+                this.ui.showTeacherLogin();
+            }
         } else {
             this.ui.showPlayerJoin();
         }
     }
 
     // --- Teacher Actions ---
+
+    async handleTeacherLogin(email, password) {
+        const loginBtn = document.getElementById('login-submit-btn');
+        const backBtn = document.getElementById('back-from-login-btn');
+        const loading = document.getElementById('login-loading');
+        const statusMsg = document.getElementById('login-status-msg');
+
+        try {
+            if (loginBtn) loginBtn.disabled = true;
+            if (backBtn) backBtn.disabled = true;
+            if (loading) loading.classList.remove('hidden');
+            if (statusMsg) {
+                statusMsg.innerText = "";
+                statusMsg.className = "status-msg";
+            }
+
+            await api.loginTeacher(email, password);
+
+            if (statusMsg) {
+                statusMsg.innerText = "ACESSO CONCEDIDO";
+                statusMsg.classList.add('success');
+            }
+
+            setTimeout(() => {
+                this.ui.showTeacherSetup();
+            }, 1000);
+
+        } catch (e) {
+            console.error("Login failed:", e);
+            if (statusMsg) {
+                statusMsg.innerText = "ERRO: " + (e.message.includes('auth/') ? "Credenciais inválidas" : e.message);
+                statusMsg.classList.add('error');
+            }
+            if (loginBtn) loginBtn.disabled = false;
+            if (backBtn) backBtn.disabled = false;
+        } finally {
+            if (loading) loading.classList.add('hidden');
+        }
+    }
+
+    handleAuthStateChanged(user) {
+        console.log("Auth state changed:", user ? user.uid : "None");
+        // If we are on the login screen and user just logged in as teacher, transition
+        const loginScreen = document.getElementById('teacher-login-screen');
+        if (user && loginScreen && !loginScreen.classList.contains('hidden')) {
+            if (user.providerData.some(p => p.providerId === 'password')) {
+                this.ui.showTeacherSetup();
+            }
+        }
+    }
 
     async createSession() {
         const createBtn = document.getElementById('create-session-btn');
@@ -46,10 +123,6 @@ class Game {
             this.sessionCode = await api.createSession();
             this.ui.updateSessionDisplay(this.sessionCode);
             api.onSessionUpdate((data) => this.handleSync(data));
-
-            // Hide the reconnect container on success
-            const reconnectContainer = document.querySelector('.reconnect-container');
-            if (reconnectContainer) reconnectContainer.classList.add('hidden');
         } catch (e) {
             alert(e.message);
             if (createBtn) createBtn.disabled = false;
@@ -60,28 +133,44 @@ class Game {
     }
 
     async reconnectSession(code) {
-        const reconnectBtn = document.getElementById('reconnect-session-btn');
-        const loading = document.getElementById('reconnect-loading');
+        const loading = document.getElementById('sessions-loading');
 
         try {
-            if (reconnectBtn) reconnectBtn.disabled = true;
             if (loading) loading.classList.remove('hidden');
 
             this.sessionCode = await api.reconnectSession(code);
             this.role = 'teacher';
             this.ui.updateSessionDisplay(this.sessionCode);
 
-            // Hide the reconnect container on success
-            const reconnectContainer = document.querySelector('.reconnect-container');
-            if (reconnectContainer) reconnectContainer.classList.add('hidden');
-
             api.onSessionUpdate((data) => this.handleSync(data));
         } catch (e) {
             alert(e.message);
-            if (reconnectBtn) reconnectBtn.disabled = false;
         } finally {
             if (loading) loading.classList.add('hidden');
         }
+    }
+
+    async handleDeleteSession(code) {
+        if (!confirm(`Tem certeza que deseja deletar a sessão ${code}?`)) return;
+
+        const loading = document.getElementById('sessions-loading');
+        try {
+            if (loading) loading.classList.remove('hidden');
+            await api.deleteSessionByCode(code);
+            // Refresh list
+            this.ui.loadTeacherSessions();
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            if (loading) loading.classList.add('hidden');
+        }
+    }
+
+    async handleLogout() {
+        if (!confirm("Tem certeza que deseja fazer logoff do Centro de Comando?")) return;
+        await api.logout();
+        this.role = null;
+        this.ui.showRoleSelection();
     }
 
     async startMission() {
@@ -213,12 +302,19 @@ class Game {
     handleSync(data) {
         if (!data) {
             // Session deleted/cancelled
+            const wasTeacher = this.role === 'teacher';
             if (this.role === 'player') {
                 alert("A sessão foi encerrada pelo professor.");
             }
             this.sessionCode = null;
             this.globe.stopCycling();
-            this.ui.showRoleSelection();
+
+            if (wasTeacher) {
+                this.ui.showTeacherSetup();
+            } else {
+                this.ui.showRoleSelection();
+            }
+
             if (api.unsubscribe) api.unsubscribe();
             return;
         }
@@ -469,726 +565,8 @@ class Game {
     }
 }
 
-class UI {
-    constructor(game) {
-        this.game = game;
-        this.lastSoundRound = 0;
-        this.initEventListeners();
-    }
-
-    initEventListeners() {
-        // Global Click Sound
-        document.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                this.game.audio.play('click');
-            }
-        });
-
-        // Role Selection
-        document.getElementById('teacher-role-btn').addEventListener('click', () => this.game.selectRole('teacher'));
-        document.getElementById('player-role-btn').addEventListener('click', () => this.game.selectRole('player'));
-
-        // Return to selection
-        document.querySelectorAll('.return-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.showRoleSelection());
-        });
-
-        const cancelBtn = document.getElementById('cancel-session-btn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.game.cancelSession());
-        }
-
-        // Teacher Setup
-        const createBtn = document.getElementById('create-session-btn');
-        if (createBtn) {
-            createBtn.addEventListener('click', () => this.game.createSession());
-        }
-
-        const startBtn = document.getElementById('start-game-btn');
-        if (startBtn) {
-            startBtn.addEventListener('click', () => this.game.startMission());
-        }
-
-        const playerJoinBtn = document.getElementById('join-session-btn');
-        if (playerJoinBtn) {
-            playerJoinBtn.addEventListener('click', () => {
-                const code = document.getElementById('join-code-input').value;
-                const name = document.getElementById('player-name-input').value;
-                if (code.length === 4 && name.length >= 2) {
-                    this.game.joinMission(code, name);
-                } else {
-                    alert("Insira um código de 4 dígitos e um nome com pelo menos 2 letras.");
-                }
-            });
-        }
-
-        const leaveBtn = document.getElementById('leave-session-btn');
-        if (leaveBtn) {
-            leaveBtn.addEventListener('click', () => this.game.leaveMission());
-        }
-
-        const reconnectBtn = document.getElementById('reconnect-session-btn');
-        if (reconnectBtn) {
-            reconnectBtn.addEventListener('click', () => {
-                const code = document.getElementById('reconnect-code-input').value;
-                if (code.length === 4) {
-                    this.game.reconnectSession(code);
-                } else {
-                    alert("Por favor, insira um código de 4 dígitos.");
-                }
-            });
-        }
-
-        // Player Submission
-        const submitBtn = document.getElementById('submit-allocation-btn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => {
-                const allocations = this.getCurrentAllocations();
-                this.game.submitAllocation(allocations);
-            });
-        }
-
-        // Spacebar shortcut for Presidential Button
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && submitBtn && !submitBtn.disabled) {
-                const resourceScreen = document.getElementById('resource-allocation-container');
-                if (resourceScreen && !resourceScreen.classList.contains('hidden')) {
-                    e.preventDefault(); // Prevent page scroll
-                    submitBtn.click();
-                }
-            }
-        });
-
-        // Mute
-        const muteBtn = document.getElementById('mute-btn');
-        if (muteBtn) {
-            muteBtn.addEventListener('click', () => {
-                const isMuted = this.game.audio.toggleMute();
-                muteBtn.innerText = isMuted ? '🔇' : '🔊';
-            });
-        }
-
-        // Restart flow
-        const playerReadyBtn = document.getElementById('player-ready-btn');
-        if (playerReadyBtn) {
-            playerReadyBtn.addEventListener('click', () => this.game.requestRestart());
-        }
-
-        const teacherRestartBtn = document.getElementById('teacher-restart-btn');
-        if (teacherRestartBtn) {
-            teacherRestartBtn.addEventListener('click', () => this.game.teacherRestart());
-        }
-
-        // Next Round button
-        const nextRoundBtn = document.getElementById('next-round-btn');
-        if (nextRoundBtn) {
-            nextRoundBtn.addEventListener('click', () => this.game.advanceFromResults());
-        }
-    }
-
-    showRoleSelection() {
-        this.hideAll();
-        document.getElementById('role-screen').classList.remove('hidden');
-        document.getElementById('role-screen').classList.add('active');
-
-        // Reset inputs
-        document.getElementById('join-code-input').value = '';
-        document.getElementById('player-name-input').value = '';
-        document.getElementById('reconnect-code-input').value = '';
-        document.getElementById('session-info').classList.add('hidden');
-        document.getElementById('teacher-initial-actions').classList.remove('hidden');
-        const backBtn = document.getElementById('back-to-role-btn');
-        if (backBtn) backBtn.classList.remove('hidden');
-
-        // Always ensure reconnect container is visible for teachers
-        const reconnectContainer = document.querySelector('.reconnect-container');
-        if (reconnectContainer) reconnectContainer.classList.remove('hidden');
-    }
-
-    showTeacherSetup() {
-        this.hideAll();
-        document.getElementById('teacher-setup-screen').classList.remove('hidden');
-        // Ensure buttons are in initial state if no session active
-        if (!this.game.sessionCode) {
-            document.getElementById('session-info').classList.add('hidden');
-            document.getElementById('teacher-initial-actions').classList.remove('hidden');
-        }
-    }
-
-    showPlayerJoin() {
-        this.hideAll();
-        document.getElementById('player-join-screen').classList.remove('hidden');
-        const statusEl = document.getElementById('join-status');
-        if (statusEl) {
-            statusEl.innerText = "";
-            statusEl.className = "";
-        }
-    }
-
-    showPlayerLobby() {
-        this.hideAll();
-        document.getElementById('player-lobby-screen').classList.remove('hidden');
-    }
-
-    updateSessionDisplay(code) {
-        document.getElementById('teacher-initial-actions').classList.add('hidden');
-        document.getElementById('session-info').classList.remove('hidden');
-        document.getElementById('session-code-display').innerText = code;
-    }
-
-    renderTeacherDashboard(data) {
-        const players = data.players || {};
-        const uids = Object.keys(players);
-
-        // Setup screen player grid
-        const grid = document.getElementById('teacher-lobby-grid');
-        if (grid) {
-            grid.innerHTML = uids.map(uid => {
-                return `
-                    <div class="teacher-player-card">${players[uid].name}</div>
-                `;
-            }).join('');
-            const countEl = document.getElementById('player-count');
-            const startBtn = document.getElementById('start-game-btn');
-            if (countEl) countEl.innerText = uids.length;
-            if (startBtn) startBtn.disabled = uids.length === 0;
-        }
-
-        // Game screen player status
-        const gameGrid = document.getElementById('player-status-grid');
-        if (gameGrid) {
-            gameGrid.innerHTML = uids.map(uid => {
-                const p = players[uid];
-                const isBad = p.difficulty === 'bad';
-                return `
-                    <div class="player-status-card ${p.submitted ? 'submitted' : ''}">
-                        <div class="card-header">
-                            <span>${p.name}</span>
-                            ${isBad ? '<span class="diff-badge hard">CRÍTICO</span>' : '<span class="diff-badge">ESTÁVEL</span>'}
-                        </div>
-                        <div class="player-score">${p.score || 0} PTS</div>
-                        <div class="status-indicator"></div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Update News Feed if active
-        if (data.status === 'active' && !this.newsInterval) {
-            this.updateNewsFeed();
-        }
-    }
-
-    updateNewsFeed(specificContinent = null) {
-        const data = this.game.syncData;
-        if (!data || !data.players) return;
-
-        const uids = Object.keys(data.players);
-        if (uids.length === 0) return;
-
-        let continent = specificContinent;
-        let p = null;
-
-        if (continent) {
-            p = Object.values(data.players).find(player => player.continent === continent);
-        } else {
-            const randomUid = uids[Math.floor(Math.random() * uids.length)];
-            p = data.players[randomUid];
-            continent = p.continent || "Geral";
-        }
-
-        // Decide news type
-        let type = 'neutral';
-        if (p && p.difficulty === 'bad') type = 'bad';
-        else if (p && p.difficulty === 'good') type = 'good';
-
-        const templates = GAME_DATA.newsTemplates[type];
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        const newsText = template.replace('{continent}', continent);
-
-        this.addNewsItem(continent, newsText);
-    }
-
-    addNewsItem(continent, text) {
-        const container = document.getElementById('news-ticker-track');
-        if (!container) return;
-
-        const item = document.createElement('div');
-        item.className = 'news-item';
-        item.innerHTML = `
-            <div class="news-dot"></div>
-            <span class="news-continent">[${continent}]</span>
-            <span class="news-text">${text}</span>
-        `;
-
-        container.appendChild(item);
-
-        // In a ticker, we keep a longer history of items for the loop
-        if (container.children.length > 20) {
-            container.removeChild(container.firstChild);
-        }
-    }
-
-    showTeacherGame(scenario, round) {
-        this.hideAll();
-        document.getElementById('teacher-game-screen').classList.remove('hidden');
-        document.getElementById('app').classList.add('clear-app');
-        const roundInfo = GAME_DATA.rounds[round - 1];
-        // document.getElementById('scenario-text').innerHTML = `
-        //     <div style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1rem;">ROUND ${round}: ${roundInfo.name}</div>
-        //     <p>${scenario ? scenario.text : "Os líderes estão enfrentando desafios adaptados às suas decisões anteriores. Monitore o progresso no painel abaixo."}</p>
-        // `;
-    }
-
-    showPlayerInteraction(scenario) {
-        this.hideAll();
-        document.getElementById('player-game-screen').classList.remove('hidden');
-        document.getElementById('resource-allocation-container').classList.remove('hidden');
-        document.getElementById('wait-message').classList.add('hidden');
-        document.getElementById('player-scenario-brief').innerText = scenario.text;
-
-        this.renderSliders(scenario.initiatives);
-    }
-
-    renderSliders(initiatives) {
-        const container = document.getElementById('sliders-container');
-        container.innerHTML = initiatives.map(init => `
-            <div class="slider-group">
-                <label>
-                    <span>${init.name}</span>
-                    <span class="value-display">0%</span>
-                </label>
-                <input type="range" min="0" max="100" value="0" class="resource-slider" data-id="${init.id}">
-            </div>
-        `).join('');
-
-        // Add slider logic to balance pool
-        const sliders = container.querySelectorAll('.resource-slider');
-        sliders.forEach(slider => {
-            slider.addEventListener('input', () => this.balanceSliders(slider, sliders));
-        });
-
-        // Initialize display
-        this.updateSliderDisplays(sliders);
-    }
-
-    balanceSliders(changedSlider, allSliders) {
-        let total = 0;
-        allSliders.forEach(s => total += parseInt(s.value));
-
-        if (total > 100) {
-            const others = Array.from(allSliders).filter(s => s !== changedSlider);
-            const othersTotal = others.reduce((sum, s) => sum + parseInt(s.value), 0);
-            const remainingPool = 100 - parseInt(changedSlider.value);
-
-            if (othersTotal > 0) {
-                // Calculate proportional values with fractional parts
-                const items = others.map(s => {
-                    const exact = (parseInt(s.value) / othersTotal) * remainingPool;
-                    return {
-                        slider: s,
-                        floorValue: Math.floor(exact),
-                        fraction: exact - Math.floor(exact)
-                    };
-                });
-
-                // Apply floor values
-                items.forEach(item => {
-                    item.slider.value = item.floorValue;
-                });
-
-                // Distribute remainder to those with largest fractional parts (fair rounding)
-                let currentTotal = parseInt(changedSlider.value) + items.reduce((sum, item) => sum + item.floorValue, 0);
-                let remainder = 100 - currentTotal;
-
-                if (remainder > 0) {
-                    // Sort by highest fraction to lowest
-                    items.sort((a, b) => b.fraction - a.fraction);
-                    for (let i = 0; i < remainder; i++) {
-                        const val = parseInt(items[i].slider.value);
-                        items[i].slider.value = val + 1;
-                    }
-                }
-            } else if (others.length > 0) {
-                others.forEach(s => s.value = 0);
-            }
-        }
-
-        this.updateSliderDisplays(allSliders);
-    }
-
-    updateSliderDisplays(sliders) {
-        let total = 0;
-        sliders.forEach(s => {
-            const val = parseInt(s.value);
-            total += val;
-            s.closest('.slider-group').querySelector('.value-display').innerText = `${val}%`;
-        });
-        document.getElementById('remaining-resources').innerText = 100 - total;
-    }
-
-    getCurrentAllocations() {
-        const allocations = {};
-        document.querySelectorAll('.resource-slider').forEach(s => {
-            allocations[s.dataset.id] = parseInt(s.value);
-        });
-        return allocations;
-    }
-
-    showPlayerWait(message) {
-        document.getElementById('resource-allocation-container').classList.add('hidden');
-        const waitMsg = document.getElementById('wait-message');
-        waitMsg.classList.remove('hidden');
-        if (message) {
-            waitMsg.querySelector('p').innerText = message;
-        }
-    }
-
-    renderPlayerLobby(data) {
-        const lobbyScreen = document.getElementById('player-lobby-screen');
-        if (lobbyScreen.classList.contains('hidden')) {
-            this.hideAll();
-            lobbyScreen.classList.remove('hidden');
-        }
-
-        const players = data.players || {};
-        const uids = Object.keys(players);
-        const list = document.getElementById('lobby-players-list');
-        if (list) {
-            list.innerHTML = uids.map(uid => `<li>${players[uid].name}</li>`).join('');
-        }
-    }
-
-    updateTimer(time) {
-        const display = document.getElementById('timer-display');
-        const pDisplay = document.getElementById('player-timer-display');
-        if (display) display.innerText = `${time}s`;
-        if (pDisplay) pDisplay.innerText = `${time}s`;
-    }
-
-    renderEndScreen(data) {
-        this.hideAll();
-        document.getElementById('end-screen').classList.remove('hidden');
-
-        const players = data.players || {};
-        if (this.game.role === 'teacher') {
-            this.renderTeacherEndView(players);
-        } else {
-            this.renderPlayerEndView(players[this.game.uid]);
-        }
-    }
-
-    renderTeacherEndView(players) {
-        document.getElementById('teacher-end-view').classList.remove('hidden');
-        document.getElementById('player-end-view').classList.add('hidden');
-
-        const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
-
-        // Outcomes Grid
-        const grid = document.getElementById('player-outcomes-grid');
-        grid.innerHTML = sortedPlayers.map((p, i) => {
-            const status = this.getCivilizationStatus(p.score);
-            return `
-                <div class="outcome-card ${i === 0 ? 'winner' : ''}">
-                    <div class="outcome-rank">#${i + 1} ${p.name}</div>
-                    <div class="outcome-score">${p.score} PTS</div>
-                    <div class="outcome-status" style="color: ${status.color}">${status.label}</div>
-                    <p class="outcome-desc">${status.desc}</p>
-                </div>
-            `;
-        }).join('');
-
-        this.updateRestartLobby(players);
-    }
-
-    getCivilizationStatus(score) {
-        // Max score is 500 (5 rounds * 100)
-        if (score >= 400) return { label: "UTOPIA VERDE", color: "#10b981", desc: "Sua gestão alcançou o equilíbrio perfeito entre progresso e natureza." };
-        if (score >= 250) return { label: "ESTABILIDADE", color: "#34d399", desc: "A civilização sobreviveu aos desafios, mas com cicatrizes moderadas." };
-        if (score >= 150) return { label: "CRISE PERMANENTE", color: "#fbbf24", desc: "Recursos escassos e clima instável definem o novo normal." };
-        return { label: "COLAPSO TOTAL", color: "#ef4444", desc: "A falta de planejamento levou ao fim da sociedade como a conhecemos." };
-    }
-
-    updateRestartLobby(players) {
-        const grid = document.getElementById('player-ready-grid');
-        const uids = Object.keys(players);
-        grid.innerHTML = uids.map(uid => `
-            <div class="ready-card ${players[uid].readyToRestart ? 'ready' : ''}">
-                ${players[uid].name}<br>
-                <small>${players[uid].readyToRestart ? 'PRONTO' : 'VISUALIZANDO RESULTADOS'}</small>
-            </div>
-        `).join('');
-
-        const allReady = uids.length > 0 && uids.every(uid => players[uid].readyToRestart);
-        document.getElementById('teacher-restart-btn').disabled = !allReady;
-    }
-
-    renderPlayerEndView(playerData) {
-        if (!playerData) return;
-        document.getElementById('player-end-view').classList.remove('hidden');
-        document.getElementById('teacher-end-view').classList.add('hidden');
-
-        document.getElementById('player-score-banner').innerHTML = `
-            <h1 class="glitch" style="font-size: 3rem">${playerData.score}</h1>
-            <p>PONTUAÇÃO TOTAL ACUMULADA</p>
-        `;
-
-        const historyList = document.getElementById('scenario-history');
-        historyList.innerHTML = (playerData.history || []).map((h, i) => {
-            const isGood = h.score >= 50;
-            return `
-                <div class="history-item ${isGood ? 'good' : 'bad'}">
-                    <div class="history-index">MISSÃO 0${i + 1}</div>
-                    <div class="history-content">
-                        <div class="history-scenario">${h.scenarioText}</div>
-                        <div class="history-stats">
-                            <span class="history-badge ${isGood ? 'success' : 'fail'}">
-                                ${isGood ? 'SUCESSO' : 'CRÍTICO'}
-                            </span>
-                            <span class="history-precision">PRECISÃO: ${h.score}%</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        if (playerData.readyToRestart) {
-            document.getElementById('player-ready-btn').classList.add('hidden');
-            document.getElementById('player-ready-msg').classList.remove('hidden');
-        } else {
-            document.getElementById('player-ready-btn').classList.remove('hidden');
-            document.getElementById('player-ready-msg').classList.add('hidden');
-        }
-    }
-
-
-
-    animateValue(element, start, end, duration) {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = timestamp - startTimestamp;
-            const ratio = Math.min(progress / duration, 1);
-            element.innerText = Math.floor(ratio * (end - start) + start);
-            if (progress < duration) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    }
-
-    showRoundResults(data, player) {
-        this.hideAll();
-        document.getElementById('round-results-screen').classList.remove('hidden');
-
-        // Get latest history entry (most recent round)
-        const history = player.history || [];
-        const lastRound = history[history.length - 1];
-        const roundScore = lastRound ? lastRound.score : 0;
-
-        // Display scores
-        this.animateValue(document.getElementById('total-score'), player.score - roundScore || 0, player.score, 1000);
-
-        // Generate performance feedback (without emojis)
-        const feedbackEl = document.getElementById('performance-feedback');
-        let feedbackText = '';
-        let feedbackClass = '';
-
-        // Play sound only once per round AND only if history is updated
-        const currentRound = data.round || 1;
-        const hasHistoryForRound = (player.history || []).length >= currentRound;
-
-        if (this.lastSoundRound !== currentRound && hasHistoryForRound) {
-            if (roundScore >= 85) {
-                this.game.audio.play('success');
-            } else if (roundScore >= 70) {
-                this.game.audio.play('success');
-            } else {
-                this.game.audio.play('fail');
-            }
-            this.lastSoundRound = currentRound;
-        }
-
-        if (roundScore >= 85) {
-            feedbackText = 'DECISÕES EXCELENTES!';
-            feedbackClass = 'excellent';
-        } else if (roundScore >= 70) {
-            feedbackText = 'BOAS ESCOLHAS';
-            feedbackClass = 'good';
-        } else if (roundScore >= 50) {
-            feedbackText = 'REVISÃO RECOMENDADA';
-            feedbackClass = 'poor';
-        } else {
-            feedbackText = 'IMPACTO CRÍTICO';
-            feedbackClass = 'critical';
-        }
-
-        feedbackEl.innerText = feedbackText;
-        feedbackEl.className = 'feedback-message ' + feedbackClass;
-
-        // Show initiative breakdown with precision
-        const breakdownEl = document.getElementById('initiative-breakdown');
-        if (lastRound && lastRound.initiatives) {
-            const initiativeHTML = lastRound.initiatives.map(init => {
-                const playerValue = lastRound.resources[init.id] || 0;
-                const ideal = init.ideal;
-
-                // Calculate deviation
-                const deviation = playerValue - ideal;
-
-                // Determine feedback text and rating
-                let feedbackText = '';
-                let rating = '';
-
-                if (Math.abs(deviation) <= 10) {
-                    feedbackText = 'Ideal';
-                    rating = 'excellent';
-                } else if (deviation > 10) {
-                    feedbackText = 'Sobrecarga';
-                    rating = deviation > 25 ? 'poor' : 'fair';
-                } else {
-                    feedbackText = 'Déficit';
-                    rating = deviation < -25 ? 'poor' : 'fair';
-                }
-
-                return `
-                    <div class="initiative-item ${rating}">
-                        <span class="initiative-name">${init.name}</span>
-                        <span class="initiative-precision ${rating}">${feedbackText}</span>
-                    </div>
-                `;
-            }).join('');
-
-            breakdownEl.innerHTML = initiativeHTML;
-        } else {
-            breakdownEl.innerHTML = '';
-        }
-    }
-
-    showTeacherResults(data) {
-        this.hideAll();
-        document.getElementById('teacher-results-screen').classList.remove('hidden');
-
-        // Display round number
-        document.getElementById('teacher-results-round-number').innerText = data.round || 1;
-
-        // Sort players by score (descending)
-        const players = data.players || {};
-        const playerArray = Object.keys(players).map(uid => ({
-            uid,
-            ...players[uid]
-        })).sort((a, b) => (b.score || 0) - (a.score || 0));
-
-        // Generate player cards with rankings
-        const grid = document.getElementById('results-player-grid');
-        const rankingBadges = ['1º', '2º', '3º'];
-
-        grid.innerHTML = playerArray.map((player, index) => {
-            const history = player.history || [];
-            const lastRound = history[history.length - 1];
-            const roundScore = lastRound ? lastRound.score : 0;
-            const badge = index < 3 ? rankingBadges[index] : `#${index + 1}`;
-
-            return `
-                <div class="result-player-card">
-                    <div class="ranking-badge">${badge}</div>
-                    <div class="result-player-name">${player.name}</div>
-                    <div class="result-stats">
-                        <div class="result-stat-row">
-                            <span class="stat-label">Pontos da Rodada</span>
-                            <span class="stat-value">+${roundScore}</span>
-                        </div>
-                        <div class="result-stat-row">
-                            <span class="stat-label">Total Acumulado</span>
-                            <span class="stat-value">${player.score || 0}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        // Update button text based on whether it's the last round
-        const nextBtn = document.getElementById('next-round-btn');
-        if (data.round >= GAME_DATA.config.maxRounds) {
-            nextBtn.innerText = 'VER RESULTADOS FINAIS';
-        } else {
-            nextBtn.innerText = 'PRÓXIMA RODADA';
-        }
-    }
-
-    renderStatusCard(continent) {
-        const container = document.getElementById('status-card-container');
-        if (!container) return;
-
-        // Find player assigned to this continent
-        const players = Object.values(this.game.syncData?.players || {});
-        const p = players.find(player => player.continent === continent);
-
-        if (!p) {
-            container.innerHTML = '';
-            return;
-        }
-
-        // Calculate a "Health/Stability" percentage based on score and round
-        // Score is cumulative, max round 5, max score 500.
-        // Approx health = (score / (currentRound * 100)) * 100
-        const currentRound = this.game.syncData?.round || 1;
-        const stability = Math.min(100, Math.max(10, Math.floor(((p.score || 0) + 50) / (currentRound * 120) * 100)));
-
-        const newCard = document.createElement('div');
-        newCard.className = 'status-card';
-        newCard.innerHTML = `
-            <div class="status-card-header">
-                <div>
-                    <div class="status-card-continent">${continent}</div>
-                    <div class="status-card-player">${p.name.toUpperCase()}</div>
-                </div>
-                <div class="status-card-score">
-                    <span class="score-num">${p.score || 0}</span>
-                    <span class="score-lbl">PONTOS</span>
-                </div>
-            </div>
-            <div class="status-card-body">
-                <div class="status-bar-container">
-                    <div class="status-bar-label">
-                        <span>ESTABILIDADE DA CIVILIZAÇÃO</span>
-                        <span>${stability}%</span>
-                    </div>
-                    <div class="status-bar-bg">
-                        <div class="status-bar-fill" style="width: ${stability}%"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Handle transition: fade out old card if exists
-        const oldCard = container.querySelector('.status-card');
-        if (oldCard) {
-            oldCard.classList.add('exit');
-            setTimeout(() => {
-                container.innerHTML = '';
-                container.appendChild(newCard);
-            }, 400);
-        } else {
-            container.appendChild(newCard);
-        }
-    }
-
-    hideAll() {
-        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-        document.getElementById('app').classList.remove('clear-app');
-
-        // Ensure all buttons are re-enabled when changing screens
-        document.querySelectorAll('button').forEach(btn => {
-            btn.disabled = false;
-        });
-
-        // Hide any active loading indicators
-        document.querySelectorAll('.loading-container').forEach(loading => {
-            loading.classList.add('hidden');
-        });
-    }
-}
-
-const game = new Game();
-game.init();
+// Entry Point
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new Game();
+    game.init();
+});

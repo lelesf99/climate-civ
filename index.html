@@ -5,13 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Civilização Climática</title>
-    <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/globe.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Roboto+Slab:wght@400;700;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Electrolize&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
     <!-- Three.js Setup -->
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -37,8 +38,10 @@
             </header>
 
             <div class="button-group">
-                <button id="teacher-role-btn" class="retro-btn retro-btn-secondary">Professor</button>
-                <button id="player-role-btn" class="retro-btn">Aluno</button>
+                <button id="teacher-role-btn" class="retro-btn retro-btn-secondary"><span
+                        class="material-symbols-outlined">supervisor_account</span> Professor</button>
+                <button id="player-role-btn" class="retro-btn"><span
+                        class="material-symbols-outlined">sports_esports</span> Aluno</button>
             </div>
 
             <section class="tutorial-section">
@@ -92,7 +95,43 @@
             </footer>
         </div>
 
-        <!-- TEACHER LOGIN / SETUP -->
+        <!-- TEACHER LOGIN -->
+        <div id="teacher-login-screen" class="screen hidden">
+            <h1 class="glitch">CENTRO DE COMANDO</h1>
+
+            <div class="warning-ticker">
+                <span class="warning-sign">!! ACESSO RESTRITO !!</span>
+            </div>
+
+            <div class="login-form-container">
+                <div class="input-group">
+                    <label for="teacher-email">E-MAIL</label>
+                    <input class="retro-input" type="email" id="teacher-email" placeholder="seu@email.com" required
+                        aria-label="E-mail do Professor">
+                </div>
+                <div class="input-group">
+                    <label for="teacher-password">SENHA</label>
+                    <input class="retro-input" type="password" id="teacher-password" placeholder="••••••••" required
+                        aria-label="Senha do Professor">
+                </div>
+
+                <div class="button-group">
+                    <button id="back-from-login-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                            class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                    <button id="login-submit-btn" class="retro-btn"><span class="material-symbols-outlined">login</span>
+                        ENTRAR</button>
+                </div>
+
+            </div>
+            <p id="login-status-msg" class="status-msg"></p>
+
+            <div id="login-loading" class="loading-container hidden">
+                <div class="loading-bar"></div>
+                <p>Verificando credenciais...</p>
+            </div>
+        </div>
+
+        <!-- TEACHER SETUP / CONTROL CENTER -->
         <div id="teacher-setup-screen" class="screen hidden">
             <h1>CENTRO DE COMANDO</h1>
             <div id="session-info" class="hidden">
@@ -107,28 +146,32 @@
                 </div>
 
                 <div class="button-group">
-                    <button id="cancel-session-btn" class="retro-btn retro-btn-secondary return-btn">CANCELAR</button>
-                    <button id="start-game-btn" class="retro-btn" disabled>INICIAR MISSÃO</button>
+                    <button id="cancel-session-btn" class="retro-btn retro-btn-danger"><span
+                            class="material-symbols-outlined">cancel</span> CANCELAR</button>
+                    <button id="start-game-btn" class="retro-btn" disabled><span
+                            class="material-symbols-outlined">rocket_launch</span> INICIAR MISSÃO</button>
                 </div>
             </div>
             <div id="teacher-initial-actions" class="button-group">
-                <button id="create-session-btn" class="retro-btn">CRIAR NOVA SESSÃO</button>
-                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn">VOLTAR</button>
+                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                        class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                <button id="create-session-btn" class="retro-btn"><span
+                        class="material-symbols-outlined">add_circle</span> NOVA SESSÃO</button>
                 <div id="create-loading" class="loading-container hidden">
                     <div class="loading-bar"></div>
                     <p>Sincronizando com o satélite...</p>
                 </div>
             </div>
-            <div class="reconnect-container">
+            <div class="reconnect-container" id="teacher-sessions-container">
+                <h2>SESSÕES ATIVAS</h2>
+                <p>Continue uma missão em andamento ou gerencie suas sessões.</p>
                 <div class="input-group">
-                    <h2>JÁ TEM UMA SESSÃO?</h2>
-                    <p>Insira o código da sessão para reconectar.</p>
-                    <input class="retro-input" type="text" id="reconnect-code-input" placeholder="CÓDIGO 4 DÍGITOS"
-                        maxlength="4">
-                    <button id="reconnect-session-btn" class="retro-btn retro-btn-secondary">RECONECTAR</button>
-                    <div id="reconnect-loading" class="loading-container hidden">
+                    <div id="sessions-loading" class="loading-container hidden">
                         <div class="loading-bar"></div>
-                        <p>Recuperando sinal da base...</p>
+                    </div>
+                    <div id="teacher-sessions-list" class="sessions-list">
+                        <!-- Sessions injected by JS -->
+                        <p class="empty-msg">Nenhuma sessão ativa encontrada.</p>
                     </div>
                 </div>
             </div>
@@ -143,8 +186,10 @@
                 <input class="retro-input" type="text" id="player-name-input" placeholder="SEU NOME" maxlength="12">
             </div>
             <div class="button-group">
-                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn">VOLTAR</button>
-                <button id="join-session-btn" class="retro-btn">CONECTAR</button>
+                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                        class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                <button id="join-session-btn" class="retro-btn"><span class="material-symbols-outlined">login</span>
+                    CONECTAR</button>
             </div>
             <p id="join-status"></p>
         </div>
@@ -162,7 +207,8 @@
             </div>
 
             <div class="button-group">
-                <button id="leave-session-btn" class="retro-btn retro-btn-secondary">SAIR DA SESSÃO</button>
+                <button id="leave-session-btn" class="retro-btn retro-btn-secondary"><span
+                        class="material-symbols-outlined">logout</span> SAIR DA SESSÃO</button>
             </div>
         </div>
 
@@ -255,7 +301,8 @@
             </div>
 
             <div class="button-group">
-                <button id="next-round-btn" class="retro-btn">PRÓXIMA RODADA</button>
+                <button id="next-round-btn" class="retro-btn"><span class="material-symbols-outlined">skip_next</span>
+                    PRÓXIMA RODADA</button>
             </div>
         </div>
 
@@ -274,7 +321,8 @@
                 <div id="restart-lobby">
                     <h3>PREPARAÇÃO PARA NOVA MISSÃO</h3>
                     <div id="player-ready-grid"></div>
-                    <button id="teacher-restart-btn" class="retro-btn" disabled>REINICIAR SISTEMAS</button>
+                    <button id="teacher-restart-btn" class="retro-btn" disabled><span
+                            class="material-symbols-outlined">restart_alt</span> REINICIAR SISTEMAS</button>
                 </div>
             </div>
 
@@ -286,7 +334,8 @@
                         <!-- History items injected by JS -->
                     </div>
                 </div>
-                <button id="player-ready-btn" class="retro-btn">QUERO JOGAR NOVAMENTE</button>
+                <button id="player-ready-btn" class="retro-btn"><span class="material-symbols-outlined">thumb_up</span>
+                    QUERO JOGAR NOVAMENTE</button>
                 <div id="player-ready-msg" class="hidden">
                     <p class="glitch">SINAL DE PRONTIDÃO ENVIADO</p>
                     <p>Aguardando o professor e outros líderes...</p>
@@ -294,22 +343,23 @@
             </div>
         </div>
 
-        <!-- Mute Button -->
-        <div id="audio-controls" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
-            <button id="mute-btn" class="retro-btn icon-btn">🔊</button>
+        <!-- Top Right Controls (Logoff - Teacher Only) -->
+        <div id="teacher-controls" class="hidden" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+            <button id="teacher-logout-btn" class="retro-btn icon-btn retro-btn-danger"
+                style="border-color: var(--error-color); color: var(--error-color); font-size: 0.9rem; padding: 0.5rem;"
+                title="Fazer Logoff">
+                <span class="material-symbols-outlined">power_settings_new</span>
+            </button>
+        </div>
+
+        <!-- Bottom Right Controls (Mute) -->
+        <div id="audio-controls" style="position: fixed; top: 10px; left: 10px; z-index: 1000;">
+            <button id="mute-btn" class="retro-btn icon-btn" title="Mutar Áudio">🔊</button>
         </div>
     </div>
 
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
-    <script src="scripts/data.js"></script>
-    <script src="scripts/firebase-config.js"></script>
-    <script src="scripts/api.js"></script>
-    <script src="scripts/AudioController.js"></script>
-    <script type="module" src="scripts/GlobeController.js"></script>
     <script type="module" src="scripts/game.js"></script>
 </body>
 

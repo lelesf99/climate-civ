@@ -1,4 +1,4 @@
-class AudioController {
+export class AudioController {
     constructor() {
         this.isMuted = false;
         this.sounds = {

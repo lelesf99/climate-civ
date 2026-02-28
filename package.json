@@ -4,10 +4,18 @@
   "description": "Climate Civ Game",
   "main": "index.html",
   "scripts": {
-    "start": "npx serve .",
-    "serve": "python -m http.server 8000"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "devDependencies": {
-    "serve": "^14.2.1"
+    "gh-pages": "^6.3.0",
+    "serve": "^14.2.1",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "firebase": "^12.10.0",
+    "three": "^0.183.2"
   }
 }
