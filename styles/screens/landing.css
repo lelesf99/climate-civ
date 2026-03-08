@@ -14,8 +14,9 @@
 .tagline {
     font-family: var(--font-head);
     color: var(--teal);
-    letter-spacing: 3px;
-    font-size: 1rem;
+    text-shadow: 0 0 5px var(--teal);
+    letter-spacing: 2px;
+    font-size: 1.2rem;
     font-weight: bold;
 }
 
@@ -27,28 +28,39 @@
 .tutorial-steps {
     display: flex;
     flex-direction: column;
-    gap: 4rem;
-    padding: 2rem;
+    gap: 2rem;
+    padding: 1rem;
 }
 
 .tutorial-step {
-    border: 2px solid var(--teal);
-    padding: 2rem;
-    border-radius: 16px;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    outline: 0px solid var(--teal);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     max-width: 700px;
 }
 
-.tutorial-step:hover {
-    border-color: var(--teal);
+.tutorial-step:hover,
+.tutorial-step:active,
+.tutorial-step:focus {
+    outline: 8px solid var(--teal);
+    outline-offset: -4px;
     background: var(--muted-teal);
-    box-shadow: 0 0 50px var(--teal);
+    box-shadow: 0 0 20px var(--teal),
+        inset 0 0 20px var(--teal);
     transform: scale(1.05);
+}
+
+.tutorial-step:hover .step-number,
+.tutorial-step:active .step-number,
+.tutorial-step:focus .step-number {
+    color: white;
+    text-shadow: 0 0 10px var(--teal);
 }
 
 .tutorial-step:nth-child(even) {
     align-self: flex-end;
-    border-color: rgba(234, 88, 12, 0.3);
+    outline-color: var(--orange);
 }
 
 .tutorial-step:nth-child(even) .step-header {
@@ -59,10 +71,25 @@
     color: var(--orange);
 }
 
-.tutorial-step:nth-child(even):hover {
+.tutorial-step:nth-child(even) p {
+    border-top: 1px solid var(--orange);
+}
+
+.tutorial-step:nth-child(even):hover .step-number,
+.tutorial-step:nth-child(even):active .step-number,
+.tutorial-step:nth-child(even):focus .step-number {
+    color: white;
+    text-shadow: 0 0 10px var(--orange);
+}
+
+
+.tutorial-step:nth-child(even):hover,
+.tutorial-step:nth-child(even):active,
+.tutorial-step:nth-child(even):focus {
+    outline-color: var(--orange);
     background: var(--muted-orange);
-    border-color: var(--orange);
-    box-shadow: 0 0 50px var(--orange);
+    box-shadow: 0 0 20px var(--orange),
+        inset 0 0 20px var(--orange);
 }
 
 .step-header {
@@ -70,18 +97,21 @@
     align-items: center;
     gap: 2.5rem;
     margin-bottom: 2.5rem;
+    justify-content: space-between;
 }
 
 .step-number {
     font-family: var(--font-head);
-    font-size: 5rem;
+    font-size: 3.5rem;
     font-weight: 900;
     color: var(--teal);
     opacity: 0.9;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .tutorial-step h3 {
     color: var(--text-color);
+    font-family: var(--font-body);
     font-size: 2.5rem;
     margin: 0;
     text-transform: uppercase;
@@ -90,6 +120,8 @@
 }
 
 .tutorial-step p {
+    border-top: 1px solid var(--teal);
+    padding-top: 1rem;
     font-size: 1.4rem;
     opacity: 1;
     line-height: 1.8;
@@ -100,7 +132,6 @@
 .tutorial-img {
     width: 100%;
     max-width: 600px;
-    margin-top: 2rem;
     border: 3px solid var(--teal);
     border-radius: 8px;
     box-shadow: 0 0 30px var(--teal);

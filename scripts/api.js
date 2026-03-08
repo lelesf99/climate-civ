@@ -82,11 +82,21 @@ export class FirebaseProxy {
 
     async logout() {
         try {
+            if (!this.auth) return;
+            this.stopSessionSync();
             await this.auth.signOut();
             this.role = null;
         } catch (error) {
-            console.error("Logout error:", error);
+            console.error("Logout error in api.js:", error);
         }
+    }
+
+    stopSessionSync() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+        }
+        this.sessionRef = null;
     }
 
     // --- Teacher Methods ---
@@ -143,11 +153,12 @@ export class FirebaseProxy {
     }
 
     async deleteSessionByCode(code) {
-        await this.db.collection('sessions').doc(code).delete();
+        // If this is the active session, stop sync first
         if (this.sessionRef && this.sessionRef.id === code) {
-            this.sessionRef = null;
+            this.stopSessionSync();
             this.role = null;
         }
+        await this.db.collection('sessions').doc(code).delete();
     }
 
     async startNextScenario(assignments = {}, round) {
@@ -246,11 +257,13 @@ export class FirebaseProxy {
 
     async leaveSession(uid) {
         if (!this.sessionRef) return;
-        await this.sessionRef.update({
+        const ref = this.sessionRef;
+        this.stopSessionSync();
+        this.role = null;
+
+        await ref.update({
             [`players.${uid}`]: firebase.firestore.FieldValue.delete()
         });
-        this.sessionRef = null;
-        this.role = null;
     }
 
     async signalRestartReady(uid, status) {

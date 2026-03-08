@@ -3,7 +3,7 @@
    ========================================================================== */
 .login-form-container {
     width: 100%;
-    max-width: 400px;
+    max-width: max-content;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -15,17 +15,6 @@
     position: relative;
 }
 
-.sessions-list {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    margin-top: 2rem;
-    border-top: 1px solid var(--teal);
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-    width: 100%;
-}
 
 .warning-ticker {
     background: #000;
@@ -57,8 +46,8 @@
 }
 
 .status-msg.error {
-    color: var(--red);
-    text-shadow: 0 0 10px var(--red);
+    color: var(--error-color);
+    text-shadow: 0 0 10px var(--error-color);
 }
 
 .status-msg.success {
@@ -66,25 +55,26 @@
     text-shadow: 0 0 10px var(--green);
 }
 
-.command-center-header {
+.mission-code-card {
     text-align: center;
-    padding: 2rem;
+    padding: 2rem 4rem;
+    margin-top: 2rem;
     border: 2px solid var(--teal);
-    border-radius: 8px;
+    border-radius: 2px;
     background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(249, 115, 22, 0.05));
     position: relative;
     overflow: hidden;
 }
 
-.command-center-header::before {
+.mission-code-card::before {
     content: "";
     position: absolute;
     top: 0;
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.2), transparent);
-    animation: scanner 3s infinite linear;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.5), transparent);
+    animation: scanner 5s infinite linear;
 }
 
 @keyframes scanner {
@@ -98,11 +88,12 @@
 }
 
 .session-label {
-    font-size: 0.9rem;
-    letter-spacing: 4px;
+    font-size: 2rem;
+    letter-spacing: 3px;
     color: var(--teal);
     margin-bottom: 0.5rem;
     text-shadow: 0 0 10px var(--teal);
+    font-weight: 700;
 }
 
 .status-text {
@@ -114,8 +105,10 @@
 
 .mission-code {
     font-size: 4rem;
-    font-weight: 900;
+    font-weight: 700;
+    letter-spacing: 8px;
     text-shadow: var(--chromatic-text);
+    font-family: var(--font-head);
 }
 
 .teacher-lobby-grid {
@@ -124,25 +117,15 @@
     justify-content: center;
     gap: 1rem;
     width: 100%;
-    margin: 2rem 0;
+    margin: 1rem;
     padding: 1rem;
 }
 
-.teacher-player-card {
-    background: var(--muted-teal);
-    border: 1px solid var(--teal);
-    padding: 0.8rem 1.5rem;
-    border-radius: 4px;
-    color: var(--text-color);
-    font-weight: bold;
-    font-family: var(--font-head);
-    animation: slideIn 0.3s ease-out;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 0 5px var(--teal);
+/* Session Management List */
+.reconnect-container {
+    margin-top: 2rem;
 }
 
-/* Session Management List */
 .sessions-list {
     display: flex;
     flex-direction: column;
@@ -217,4 +200,118 @@
     padding: 3rem 0;
     color: var(--text-color);
     letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   TEACHER DASHBOARD ENHANCEMENTS
+   ========================================================================== */
+
+/* Added Grid for Teacher Dashboard */
+.player-status-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto auto;
+    position: fixed;
+    top: 30rem;
+    bottom: 100px;
+    left: -2rem;
+    right: -2rem;
+    /*NEWS FEED HEIGHT*/
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Status Card System */
+#status-card-container {
+    position: absolute;
+    top: 4rem;
+    width: 50%;
+    min-width: 400px;
+    margin: auto;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.status-bar-container {
+    width: 100%;
+}
+
+.status-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+    font-weight: bold;
+}
+
+.status-bar-bg {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.status-bar-fill {
+    height: 100%;
+    background: var(--orange);
+    box-shadow: 0 0 10px var(--orange);
+    transition: width 1s ease;
+}
+
+.card-news-feed {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--teal);
+    overflow: hidden;
+    width: 100%;
+}
+
+.card-news-track {
+    display: flex;
+    gap: 1rem;
+    white-space: nowrap;
+    width: max-content;
+    animation: card-ticker-roll 30s linear infinite;
+}
+
+.card-news-item {
+    letter-spacing: 1px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.8);
+    position: relative;
+    padding-left: 1rem;
+}
+
+@keyframes card-ticker-roll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.card-news-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    background-color: var(--orange);
+    height: .8rem;
+    width: .8rem;
+    top: .3rem;
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--orange);
+}
+
+.result-card {
+    outline: 2px solid var(--teal);
+    padding: 1rem;
+    border-radius: 2px;
+}
+
+#mission-code-header {
+    position: fixed;
+    bottom: 1rem;
 }

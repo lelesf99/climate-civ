@@ -1,9 +1,8 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main  # Set this to your default branch
+  workflow_dispatch:
+
       
 permissions:
   contents: write
@@ -24,12 +23,5 @@ jobs:
           echo "window.FIREBASE_CONFIG = $FIREBASE_CONFIG_JSON;" > scripts/firebase-config.js
           touch .nojekyll
 
-      - name: Prepare for Deployment
+      - name: Prepare Workspace
         run: rm .gitignore
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages

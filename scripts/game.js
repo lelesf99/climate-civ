@@ -3,18 +3,14 @@ import { GAME_DATA } from './data.js';
 import { AudioController } from './AudioController.js';
 import { GlobeController } from './GlobeController.js';
 import { UI } from './UI.js';
-
-// Import Styles
-import '../styles/base.css';
-import '../styles/ui.css';
-import '../styles/effects.css';
-import '../styles/screens/landing.css';
-import '../styles/screens/teacher.css';
-import '../styles/screens/player.css';
-import '../styles/game.css';
-import '../styles/responsive.css';
+import { ScoringEngine } from './Game_modules/ScoringEngine.js';
+import { SessionManager } from './Game_modules/SessionManager.js';
+import firebase from 'firebase/compat/app';
 
 var roundRobinIndex = 0;
+const DEBUG_TEACHER_DASHBOARD = false;
+const DEBUG_STUDENT_ALLOCATION = false;
+
 export class Game {
     constructor() {
         this.role = null;
@@ -24,30 +20,54 @@ export class Game {
         this.timeLeft = 90;
         this.timer = null;
         this.audio = new AudioController();
-        this.players = {}; // For teacher to track local state
+        this.players = {};
         this.syncData = null;
+
+        // Initialize Managers
+        this.scorer = new ScoringEngine(this);
+        this.sessionManager = new SessionManager(this);
     }
 
     async init() {
         this.ui = new UI(this);
         this.globe = new GlobeController('globe-container');
 
-        // Initialize Firebase early so auth listener works
         const { FIREBASE_CONFIG } = await import('./firebase-config.js');
         await api.init(FIREBASE_CONFIG);
 
-        // Listen for auth changes for persistence
         api.onAuthStateChanged((user) => this.handleAuthStateChanged(user));
+
+        if (DEBUG_TEACHER_DASHBOARD) {
+            console.warn("DEBUG MODE: Starting Teacher Dashboard View");
+            setTimeout(() => this.startDebugTeacherView(), 2500);
+            return;
+        }
+
+        if (DEBUG_STUDENT_ALLOCATION) {
+            console.warn("DEBUG MODE: Starting Student Allocation View");
+            setTimeout(() => this.startDebugStudentView(), 2500);
+            return;
+        }
+
+        setTimeout(() => {
+            const globeContainer = document.getElementById('globe-container');
+            const buttons = document.getElementById('role-buttons');
+        }, 2000);
     }
 
-    // --- Role Management ---
+    // --- Delegation to SessionManager ---
+    async createSession() { await this.sessionManager.createSession(); }
+    async reconnectSession(code) { await this.sessionManager.reconnectSession(code); }
+    async handleDeleteSession(code) { await this.sessionManager.handleDeleteSession(code); }
+    async joinMission(code, name) { await this.sessionManager.joinMission(code, name); }
+    async leaveMission() { await this.sessionManager.leaveMission(); }
+    async cancelSession() { await this.sessionManager.cancelSession(); }
 
+    // --- Role & Auth (Keep in core Game) ---
     async selectRole(role) {
         this.role = role;
-
         if (role === 'teacher') {
             const user = api.auth.currentUser;
-            // Only allow email/password users to skip login
             if (user && user.providerData.some(p => p.providerId === 'password')) {
                 this.ui.showTeacherSetup();
             } else {
@@ -57,8 +77,6 @@ export class Game {
             this.ui.showPlayerJoin();
         }
     }
-
-    // --- Teacher Actions ---
 
     async handleTeacherLogin(email, password) {
         const loginBtn = document.getElementById('login-submit-btn');
@@ -76,16 +94,11 @@ export class Game {
             }
 
             await api.loginTeacher(email, password);
-
             if (statusMsg) {
                 statusMsg.innerText = "ACESSO CONCEDIDO";
                 statusMsg.classList.add('success');
             }
-
-            setTimeout(() => {
-                this.ui.showTeacherSetup();
-            }, 1000);
-
+            setTimeout(() => this.ui.showTeacherSetup(), 1000);
         } catch (e) {
             console.error("Login failed:", e);
             if (statusMsg) {
@@ -100,185 +113,55 @@ export class Game {
     }
 
     handleAuthStateChanged(user) {
-        console.log("Auth state changed:", user ? user.uid : "None");
-        // If we are on the login screen and user just logged in as teacher, transition
         const loginScreen = document.getElementById('teacher-login-screen');
-        if (user && loginScreen && !loginScreen.classList.contains('hidden')) {
+        if (user) {
+            console.log("Teacher authenticated:", user.uid);
             if (user.providerData.some(p => p.providerId === 'password')) {
-                this.ui.showTeacherSetup();
+                if (loginScreen && !loginScreen.classList.contains('hidden')) {
+                    this.ui.showTeacherSetup();
+                }
             }
-        }
-    }
-
-    async createSession() {
-        const createBtn = document.getElementById('create-session-btn');
-        const backBtn = document.getElementById('back-to-role-btn');
-        const loading = document.getElementById('create-loading');
-
-        try {
-            if (createBtn) createBtn.disabled = true;
-            if (backBtn) backBtn.disabled = true;
-            if (loading) loading.classList.remove('hidden');
-
-            this.sessionCode = await api.createSession();
-            this.ui.updateSessionDisplay(this.sessionCode);
-            api.onSessionUpdate((data) => this.handleSync(data));
-        } catch (e) {
-            alert(e.message);
-            if (createBtn) createBtn.disabled = false;
-            if (backBtn) backBtn.disabled = false;
-        } finally {
-            if (loading) loading.classList.add('hidden');
-        }
-    }
-
-    async reconnectSession(code) {
-        const loading = document.getElementById('sessions-loading');
-
-        try {
-            if (loading) loading.classList.remove('hidden');
-
-            this.sessionCode = await api.reconnectSession(code);
-            this.role = 'teacher';
-            this.ui.updateSessionDisplay(this.sessionCode);
-
-            api.onSessionUpdate((data) => this.handleSync(data));
-        } catch (e) {
-            alert(e.message);
-        } finally {
-            if (loading) loading.classList.add('hidden');
-        }
-    }
-
-    async handleDeleteSession(code) {
-        if (!confirm(`Tem certeza que deseja deletar a sessão ${code}?`)) return;
-
-        const loading = document.getElementById('sessions-loading');
-        try {
-            if (loading) loading.classList.remove('hidden');
-            await api.deleteSessionByCode(code);
-            // Refresh list
-            this.ui.loadTeacherSessions();
-        } catch (e) {
-            alert(e.message);
-        } finally {
-            if (loading) loading.classList.add('hidden');
+        } else {
+            console.log("User signed out");
+            this.stopIntervals();
+            api.stopSessionSync();
+            this.role = null;
+            this.sessionCode = null;
+            if (this.ui) this.ui.showRoleSelection();
         }
     }
 
     async handleLogout() {
-        if (!confirm("Tem certeza que deseja fazer logoff do Centro de Comando?")) return;
+        this.stopIntervals();
         await api.logout();
-        this.role = null;
-        this.ui.showRoleSelection();
     }
+
+    // --- Game Lifecycle ---
 
     async startMission() {
         const playerUids = Object.keys(this.syncData.players || {});
         const assignments = {};
-
-        // Assign unique continents
         const continents = [...GAME_DATA.continents];
         this.shuffleArray(continents);
 
-        // Start with early-game category for everyone
         const possible = GAME_DATA.scenarios.filter(s => s.category === 'early-game');
 
         playerUids.forEach((uid, index) => {
             const randomScenario = possible[Math.floor(Math.random() * possible.length)];
             assignments[uid] = randomScenario.id;
-
-            // Assign continent (cycling if more than 6 players, though limit is 6)
             const continent = continents[index % continents.length];
-            api.sessionRef.update({
-                [`players.${uid}.continent`]: continent
-            });
+            api.sessionRef.update({ [`players.${uid}.continent`]: continent });
         });
 
         await api.startNextScenario(assignments);
-
-        // Teacher ambiance starts in Round 1
         this.audio.play('ambiance');
-    }
-
-    shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    getNextScenario(round) {
-        const scenarios = GAME_DATA.scenarios.filter(s => s.round === (this.syncData?.round || round));
-        // Simple sequential or random
-        return scenarios[0];
-    }
-
-    // --- Player Actions ---
-
-    async joinMission(code, name) {
-        const joinBtn = document.getElementById('join-session-btn');
-        const backBtn = document.getElementById('back-to-role-btn');
-        const statusEl = document.getElementById('join-status');
-
-        try {
-            if (joinBtn) joinBtn.disabled = true;
-            if (backBtn) backBtn.disabled = true;
-            if (statusEl) {
-                statusEl.innerText = "Conectando...";
-                statusEl.className = "";
-            }
-
-            const { uid } = await api.joinSession(code, name);
-            this.uid = uid;
-            this.sessionCode = code;
-
-            if (statusEl) {
-                statusEl.innerText = "CONECTADO COM SUCESSO!";
-                statusEl.classList.add('success');
-            }
-
-            // Transition to lobby after a brief delay for success feedback
-            setTimeout(() => {
-                this.ui.showPlayerLobby();
-                api.onSessionUpdate((data) => this.handleSync(data));
-            }, 1000);
-        } catch (e) {
-            alert(e.message);
-            if (joinBtn) joinBtn.disabled = false;
-            if (backBtn) backBtn.disabled = false;
-            if (statusEl) statusEl.innerText = "";
-        }
-    }
-
-    async leaveMission() {
-        if (!confirm("Tem certeza que deseja sair desta sessão?")) return;
-        try {
-            await api.leaveSession(this.uid);
-            this.uid = null;
-            this.sessionCode = null;
-            this.ui.showRoleSelection();
-        } catch (e) {
-            alert(e.message);
-        }
-    }
-
-    async cancelSession() {
-        if (confirm("Tem certeza que deseja encerrar a sessão? Todos os jogadores serão desconectados.")) {
-            await api.cancelSession();
-            // The handleSync listener will detect the deletion and handle the UI transition
-            // This gives time for all players to be notified before local cleanup
-        }
     }
 
     async advanceFromResults() {
         if (this.role !== 'teacher') return;
-
         if (this.syncData.round >= GAME_DATA.config.maxRounds) {
-            // Game over - go to final results
             await api.updateSessionStatus('finished');
         } else {
-            // Continue to next round
             await this.startNextRound();
         }
     }
@@ -287,7 +170,7 @@ export class Game {
         clearInterval(this.timer);
         this.timer = null;
         this.ui.showPlayerWait("Decisão enviada! Analisando impacto...");
-        // Save current scenario ID used for scoring later
+
         const player = this.syncData.players[this.uid];
         await api.sessionRef.update({
             [`players.${this.uid}.lastScenarioId`]: player.currentScenarioId
@@ -297,23 +180,15 @@ export class Game {
         await api.submitAllocation(this.uid, allocations);
     }
 
-    // --- Global Logic ---
-
     handleSync(data) {
         if (!data) {
-            // Session deleted/cancelled
             const wasTeacher = this.role === 'teacher';
-            if (this.role === 'player') {
-                alert("A sessão foi encerrada pelo professor.");
-            }
-            this.sessionCode = null;
+            if (this.role === 'player') alert("A sessão foi encerrada pelo professor.");
+            this.stopIntervals();
             this.globe.stopCycling();
 
-            if (wasTeacher) {
-                this.ui.showTeacherSetup();
-            } else {
-                this.ui.showRoleSelection();
-            }
+            if (wasTeacher) this.ui.showTeacherSetup();
+            else this.ui.showPlayerJoin();
 
             if (api.unsubscribe) api.unsubscribe();
             return;
@@ -328,35 +203,26 @@ export class Game {
             }
             const player = data.players[this.uid];
             if (data.status === 'active') {
-                if (player.submitted) {
-                    this.ui.showPlayerWait("Aguardando outros líderes...");
-                } else if (this.currentScenario?.id !== player.currentScenarioId) {
-                    this.startPlayerTurn(player.currentScenarioId);
-                }
-            } else if (data.status === 'results') {
-                this.ui.showRoundResults(data, player);
-            } else if (data.status === 'finished') {
-                this.ui.renderEndScreen(data);
-            }
-        } else { // teacher role
+                if (player.submitted) this.ui.showPlayerWait("Aguardando outros líderes...");
+                else if (this.currentScenario?.id !== player.currentScenarioId) this.startPlayerTurn(player.currentScenarioId);
+            } else if (data.status === 'results') this.ui.showRoundResults(data, player);
+            else if (data.status === 'finished') this.ui.renderEndScreen(data);
+        } else {
             if (data.status === 'waiting') {
                 this.ui.showTeacherSetup();
                 this.ui.updateSessionDisplay(data.code);
                 this.ui.renderTeacherDashboard(data);
-                this.timer = null; // Ensure timer is clean
+                this.timer = null;
             } else if (data.status === 'active') {
                 this.ui.renderTeacherDashboard(data);
-                if (!this.timer || this.currentScenario?.id !== data.scenarioId) {
+                // Start round if not already started for this specific round number
+                if (!this.timer || this.lastSyncedRound !== data.round) {
+                    this.lastSyncedRound = data.round;
                     this.startRound(data.scenarioId);
                 }
-                if (this.allPlayersSubmitted(data.players)) {
-                    this.endRound();
-                }
-            } else if (data.status === 'results') {
-                this.ui.showTeacherResults(data);
-            } else if (data.status === 'finished') {
-                this.ui.renderEndScreen(data);
-            }
+                if (this.allPlayersSubmitted(data.players)) this.endRound();
+            } else if (data.status === 'results') this.ui.showTeacherResults(data);
+            else if (data.status === 'finished') this.ui.renderEndScreen(data);
         }
     }
 
@@ -367,36 +233,22 @@ export class Game {
     }
 
     startRound(scenarioId) {
-        // Teacher view shows round info
-        const roundNumber = this.syncData.round || 1;
-        const maxRounds = GAME_DATA.config.maxRounds;
-
-        let scenario = null;
-        if (roundNumber === 1 || roundNumber === maxRounds) {
-            scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
-        }
-
         this.timeLeft = GAME_DATA.config.timerSeconds;
-        this.ui.showTeacherGame(scenario, roundNumber);
+        this.ui.showTeacherGame(this.sessionCode);
+
+        this.stopIntervals(); // Clear any existing before starting new
         this.startTimer();
 
-        // Start cycling through ACTIVE players' continents
         const activePlayers = Object.values(this.syncData.players || {});
-        const activeContinents = activePlayers
-            .filter(p => p.continent)
-            .map(p => p.continent);
+        const activeContinents = activePlayers.filter(p => p.continent).map(p => p.continent);
 
         if (activeContinents.length > 0) {
             this.globe.startCycling(activeContinents, (continent) => {
                 this.ui.renderStatusCard(continent);
-                // Also update news feed with a relevant snippet for that continent occasionally
-                if (Math.random() > 0.3) {
-                    this.ui.updateNewsFeed(continent);
-                }
+                if (Math.random() > 0.3) this.ui.updateNewsFeed(continent);
             }, 8000);
         }
 
-        // Start background news feed (general)
         if (!this.newsInterval) {
             this.newsInterval = setInterval(() => this.ui.updateNewsFeed(), 15000);
         }
@@ -414,29 +266,34 @@ export class Game {
         if (this.timer) clearInterval(this.timer);
         this.timer = setInterval(() => {
             this.timeLeft--;
-            this.ui.updateTimer(this.timeLeft);
-            if (this.timeLeft <= 0) {
-                this.endRound();
-            }
+            if (this.ui) this.ui.updateTimer(this.timeLeft);
+            if (this.timeLeft <= 0) this.endRound();
         }, 1000);
+    }
+
+    stopIntervals() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+        if (this.newsInterval) {
+            clearInterval(this.newsInterval);
+            this.newsInterval = null;
+        }
     }
 
     async endRound() {
         if (this.isEnding) return;
         this.isEnding = true;
 
-        clearInterval(this.timer);
-        this.timer = null;
+        this.stopIntervals();
         this.globe.stopCycling();
 
         if (this.role === 'teacher') {
-            setTimeout(async () => {
-                await api.updateSessionStatus('results');
-                await this.calculateResults();
-                this.isEnding = false;
-            }, 5000);
+            await api.updateSessionStatus('results');
+            await this.calculateResults();
+            this.isEnding = false;
         } else {
-            // Player side auto-submit if screen is open
             const interactionScreen = document.getElementById('player-game-screen');
             if (interactionScreen && !interactionScreen.classList.contains('hidden')) {
                 const allocations = this.ui.getCurrentAllocations();
@@ -449,55 +306,44 @@ export class Game {
     async calculateResults() {
         const players = this.syncData.players;
         const updates = {};
+        let anyCalculated = false;
 
         for (const uid in players) {
             const player = players[uid];
-            if (!player.submitted) continue;
+            // If they already have a history item for this round, skip to avoid double counting
+            if (player.history && player.history.length >= this.syncData.round) continue;
+            if (!player.submitted && !this.timeLeft <= 0) continue; // Only skip if not timeout
 
-            // Fetch the scenario this specific player just faced
-            const scenario = GAME_DATA.scenarios.find(s => s.id === player.currentScenarioId);
+            const scenarioId = player.currentScenarioId;
+            const scenario = GAME_DATA.scenarios.find(s => s.id === scenarioId);
             if (!scenario) continue;
 
-            const score = this.calculateImpactScore(player.resources, scenario.initiatives);
+            const score = this.scorer.calculateImpactScore(player.resources || {}, scenario.initiatives);
             updates[`players.${uid}.score`] = (player.score || 0) + score;
 
-            // Adaptive Difficulty: Toggle 'good' or 'bad' for mid-game
-            let type = player.difficulty || 'good'; // Default to good path
+            let type = player.difficulty || 'good';
             if (score <= 60) type = 'bad';
             else if (score >= 80) type = 'good';
             updates[`players.${uid}.difficulty`] = type;
 
-            // Record history
             const historyItem = {
                 scenarioId: scenario.id,
                 scenarioText: scenario.text,
-                resources: player.resources,
+                resources: player.resources || {},
                 score: score,
                 initiatives: scenario.initiatives
             };
             updates[`players.${uid}.history`] = firebase.firestore.FieldValue.arrayUnion(historyItem);
-
-            updates[`players.${uid}.submitted`] = false; // Reset for next turn
+            updates[`players.${uid}.submitted`] = false;
             updates[`players.${uid}.resources`] = {};
+            anyCalculated = true;
         }
 
-        await api.sessionRef.update(updates);
-
-        // Set status to 'results' to show round results screen
+        if (anyCalculated) {
+            await api.sessionRef.update(updates);
+        }
+        // Finalize status after data is pushed
         await api.updateSessionStatus('results');
-    }
-
-    calculateImpactScore(resources, initiatives) {
-        let totalDeviation = 0;
-        initiatives.forEach(init => {
-            const playerVal = resources[init.id] || 0;
-            const idealVal = init.ideal;
-            totalDeviation += Math.abs(playerVal - idealVal);
-        });
-
-        // Max possible deviation is roughly 200
-        const accuracy = Math.max(0, 1 - (totalDeviation / 150)); // 150 is a bit more forgiving
-        return Math.floor(accuracy * 100);
     }
 
     async startNextRound() {
@@ -506,62 +352,114 @@ export class Game {
         const assignments = {};
         const maxRounds = GAME_DATA.config.maxRounds;
 
-        const category = this.getCategoryForRound(nextRound, maxRounds);
+        const category = this.scorer.getCategoryForRound(nextRound, maxRounds);
 
         for (const uid in players) {
             const player = players[uid];
             let type = player.difficulty || 'good';
 
-            // Branch for Round 5 based on performance (Score after 4 rounds)
-            if (category === 'endgame') {
-                const totalScore = player.score || 0;
-                // Thresholds scaled for up to 5 rounds (max 500 pts)
-                if (totalScore >= 350) type = 'utopia';
-                else if (totalScore >= 180) type = 'stability';
-                else type = 'collapse';
-            }
+            const branchType = this.scorer.determineDifficultyBranch(player.score || 0, category);
+            if (branchType) type = branchType;
 
             const possible = GAME_DATA.scenarios.filter(s => s.category === category && s.type === type);
             if (possible.length > 0) {
                 const randomScenario = possible[Math.floor(Math.random() * possible.length)];
                 assignments[uid] = randomScenario.id;
             } else {
-                // Fallback to any scenario in category if type not found
                 const fallback = GAME_DATA.scenarios.filter(s => s.category === category);
                 assignments[uid] = fallback.length > 0 ? fallback[Math.floor(Math.random() * fallback.length)].id : null;
             }
         }
 
         await api.startNextScenario(assignments, nextRound);
-
-        // Teacher ambiance starts
         this.audio.play('ambiance');
     }
 
-    getCategoryForRound(round, max) {
-        if (round === 1) return 'early-game';
-        if (round === max) return 'endgame';
-
-        // Distribution of mid-game rounds
-        if (max === 5) {
-            // For max=5: R2 is present, R3 and R4 are future.
-            return (round === 2) ? 'mid-game-present' : 'mid-game-future';
-        }
-
-        // Generic logic for other maxRound values
-        const midRounds = max - 2;
-        const currentMidIndex = round - 1; // Round 2 is 1st mid round
-        if (currentMidIndex <= Math.ceil(midRounds / 2)) return 'mid-game-present';
-        return 'mid-game-future';
+    async toggleRestartReady() {
+        const isReady = this.syncData?.players?.[this.uid]?.readyToRestart || false;
+        await api.signalRestartReady(this.uid, !isReady);
     }
-
-    async requestRestart() {
-        await api.signalRestartReady(this.uid, true);
-    }
-
     async teacherRestart() {
         const playerUids = Object.keys(this.syncData.players || {});
         await api.resetSession(playerUids);
+    }
+
+    startDebugTeacherView() {
+        this.role = 'teacher';
+        this.ui.hideAll();
+
+        // Mock Session Data
+        this.syncData = {
+            status: 'active',
+            round: 1,
+            code: 'DBUG',
+            players: {}
+        };
+
+        const continents = GAME_DATA.continents;
+        continents.forEach((continent, index) => {
+            const uid = `mock_p${index + 1}`;
+            this.syncData.players[uid] = {
+                name: `Líder ${continent}`,
+                continent: continent,
+                score: Math.floor(Math.random() * 500),
+                difficulty: Math.random() > 0.5 ? 'good' : 'bad',
+                submitted: Math.random() > 0.3
+            };
+        });
+
+        // Show Teacher Game UI
+        this.ui.showTeacherGame(null, 1);
+        this.ui.renderTeacherDashboard(this.syncData);
+
+        // Static Globe Focus
+        const initialContinent = "AMERICA DO SUL";
+        this.globe.focusContinent(initialContinent);
+        this.ui.renderStatusCard(initialContinent);
+
+        // Start News Feed and Timer
+        this.ui.updateNewsFeed(); // Show first news item immediately
+        this.newsInterval = setInterval(() => this.ui.updateNewsFeed(), 15000);
+        this.timeLeft = 90;
+        this.startTimer();
+    }
+
+    startDebugStudentView() {
+        this.role = 'player';
+        this.uid = 'mock_student_1';
+        this.ui.hideAll();
+
+        // Mock Session Data
+        this.syncData = {
+            status: 'active',
+            round: 1,
+            code: 'STUD',
+            players: {
+                [this.uid]: {
+                    name: 'Estudante Alpha',
+                    continent: 'AMERICA DO SUL',
+                    score: 150,
+                    difficulty: 'good',
+                    submitted: false,
+                    currentScenarioId: 'early-transport-1'
+                }
+            }
+        };
+
+        const scenario = GAME_DATA.scenarios.find(s => s.id === 'early-transport-1') || GAME_DATA.scenarios[0];
+        this.currentScenario = scenario;
+
+        // Show Player Interaction UI
+        this.ui.showPlayerInteraction(scenario);
+        this.ui.updateTimer(this.timeLeft);
+        this.startTimer();
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
     }
 }
 

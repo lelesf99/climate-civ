@@ -30,6 +30,11 @@
         flex-wrap: wrap;
     }
 
+    #resource-allocation-container,
+    #presidential-btn-container {
+        grid-column: span 2;
+    }
+
     .player-card {
         min-width: 45%;
     }
