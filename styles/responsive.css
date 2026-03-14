@@ -1,0 +1,41 @@
+/* ==========================================================================
+   RESPONSIVENESS
+   ========================================================================== */
+@media (max-width: 768px) {
+    .hero-section h1 {
+        font-size: 3rem;
+    }
+
+    .tutorial-step {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 720px) {
+    body {
+        padding: 1rem;
+    }
+
+    #app {
+        padding: 1rem;
+        width: 100%;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    #players-dashboard {
+        flex-wrap: wrap;
+    }
+
+    #resource-allocation-container,
+    #presidential-btn-container {
+        grid-column: span 2;
+    }
+
+    .player-card {
+        min-width: 45%;
+    }
+}
