@@ -8,6 +8,10 @@
     --green: hsl(160, 84%, 39%);
     --error-color: hsl(0, 84%, 60%);
 
+    --gold: hsl(54, 100%, 50%);
+    --silver: hsl(0, 0%, 80%);
+    --bronze: hsl(25, 100%, 40%);
+
     --dark-teal: hsl(187, 84%, 10%);
     --dark-blue: hsl(222, 47%, 11%);
     --dark-orange: hsl(21, 90%, 10%);

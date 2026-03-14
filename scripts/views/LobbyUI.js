@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api } from '../services/api.js';
 
 export class LobbyUI {
     constructor(game, uiManager) {
@@ -57,15 +57,21 @@ export class LobbyUI {
             return;
         }
 
-        list.innerHTML = Object.values(data.players).map(p => {
+        let isWaitingHTML = '';
+        if (myPlayer && myPlayer.isWaiting) {
+             isWaitingHTML = '<p class="status-msg" style="color:cyan; margin-bottom:1rem;">Partida em andamento. Aguarde o professor reiniciar para entrar nativamente.</p>';
+        }
+
+        list.innerHTML = isWaitingHTML + Object.values(data.players).map(p => {
+            let statusTag = '';
+            const isActive = this.game.isPlayerActive(p);
+            
+            if (p.isWaiting) statusTag = ' <span style="font-size:0.7em; color:cyan;">(Aguardando)</span>';
+            else if (!isActive) statusTag = ' <span style="font-size:0.7em; color:red;">(Desconectado)</span>';
+
             return `
-            <div class="player-card">
-                <div class="player-card-header">
-                    <div class="player-card-id">
-                        <span class="player-card-name">${p.name}</span>
-                        <span class="player-card-continent">${p.continent || ''}</span>
-                    </div>
-                </div>
+            <div class="player-card ${!isActive ? 'inactive' : ''}">
+                <span class="player-card-name">${p.name}${statusTag}</span>
             </div>
             `;
         }).join('');
@@ -123,7 +129,11 @@ export class LobbyUI {
         }
 
         list.innerHTML = sessions.map(s => {
-            const date = s.createdAt ? new Date(s.createdAt.toMillis()).toLocaleString('pt-BR') : 'Data desconhecida';
+            let date = 'Data desconhecida';
+            if (s.createdAt) {
+                const ts = typeof s.createdAt === 'number' ? s.createdAt : (s.createdAt.toMillis ? s.createdAt.toMillis() : s.createdAt);
+                date = new Date(ts).toLocaleString('pt-BR');
+            }
             const playerCount = Object.keys(s.players || {}).length;
 
             return `

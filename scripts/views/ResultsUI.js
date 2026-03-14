@@ -1,3 +1,5 @@
+import { store, Role } from '../store/gameState.js';
+
 export class ResultsUI {
     constructor(game, uiManager) {
         this.game = game;
@@ -28,7 +30,7 @@ export class ResultsUI {
             const breakdown = document.getElementById('initiative-breakdown');
             if (breakdown) {
                 const results = lastHistory.initiatives.map(init => {
-                    const chosen = lastHistory.resources[init.id] || 0;
+                    const chosen = (lastHistory.resources || {})[init.id] || 0;
                     const ideal = init.ideal;
                     const diff = chosen - ideal;
 
@@ -99,17 +101,26 @@ export class ResultsUI {
         document.getElementById('end-screen').classList.remove('hidden');
         document.getElementById('app').classList.remove('clear-app');
 
-        if (this.game.role === 'teacher') {
+        if (store.role === Role.TEACHER) {
             document.getElementById('teacher-end-view').classList.remove('hidden');
             document.getElementById('teacher-controls').classList.remove('hidden');
+            
             const grid = document.getElementById('player-outcomes-grid');
             const sortedPlayers = Object.values(data.players).sort((a, b) => (b.score || 0) - (a.score || 0));
-            grid.innerHTML = sortedPlayers.map(p => {
+            grid.innerHTML = sortedPlayers.map((p, index) => {
                 let status = "ESTÁVEL";
                 if (p.difficulty === 'utopia') status = "UTOPIA VERDE";
                 else if (p.difficulty === 'collapse') status = "COLAPSO TOTAL";
+
+                const rank = index + 1;
+                let rankClass = "";
+                if (rank === 1) rankClass = "rank-gold";
+                else if (rank === 2) rankClass = "rank-silver";
+                else if (rank === 3) rankClass = "rank-bronze";
+
                 return `
-                    <div class="player-card ${p.difficulty === 'utopia' ? 'good' : (p.difficulty === 'collapse' ? 'critical' : '')}">
+                    <div class="player-card ${p.difficulty === 'utopia' ? 'good' : (p.difficulty === 'collapse' ? 'critical' : '')} leaderboard-item">
+                        <div class="leaderboard-rank ${rankClass}">${rank}</div>
                         <div class="player-card-header">
                             <div class="player-card-id">
                                 <span class="player-card-name">${p.name}</span>
@@ -117,11 +128,13 @@ export class ResultsUI {
                             </div>
                             <div class="player-card-score">
                                 <span class="score-num">${p.score || 0}</span>
-                                <span class="score-lbl">PONTOS</span>
+                                <span class="score-lbl">PONTOS TOTAIS</span>
                             </div>
                         </div>
                         <div class="player-card-body">
-                            <div class="score-line">STATUS FINAL: <strong>${status}</strong></div>
+                            <div class="score-line">
+                                STATUS FINAL: <strong>${status}</strong>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -142,30 +155,63 @@ export class ResultsUI {
         } else {
             document.getElementById('player-end-view').classList.remove('hidden');
             const p = data.players[this.game.uid];
-            let theme = p.difficulty;
+            if (!p) return;
 
-            document.getElementById('player-score-banner').innerHTML = `
-                <h2 class="outcome-title ${theme}">${title}</h2>
-                <div class="final-score-large">${p.score} <small>PONTOS TOTAIS</small></div>
-            `;
+            let theme = p.difficulty || 'stable';
+            let title = "ESTABILIDADE ALCANÇADA";
+
+            if (theme === 'utopia') title = "UTOPIA VERDE";
+            else if (theme === 'collapse') title = "COLAPSO TOTAL";
+            else if (theme === 'bad') title = "CRISE CLIMÁTICA";
+
+            const banner = document.getElementById('player-score-banner');
+            if (banner) {
+                banner.innerHTML = `
+                    <h2 class="outcome-title ${theme}">${title}</h2>
+                    <div class="final-score-large">${p.score || 0} <small>PONTOS TOTAIS</small></div>
+                `;
+            }
 
             const historyList = document.getElementById('scenario-history');
-            historyList.innerHTML = p.history.map((h, i) => `
-                <div class="history-item">
-                    <span class="history-round">RODADA ${i + 1}</span>
-                    <p>${h.scenarioText}</p>
-                    <div class="history-impact">IMPACTO: ${h.score}/100</div>
-                </div>
-            `).join('');
+            if (historyList) {
+                historyList.innerHTML = p.history.map((h, i) => {
+                    let statusLabel = "NÃO DEFINIDO";
+                    let statusClass = "neutral";
+
+                    if (h.score >= 80) { statusLabel = "EXCELENTE"; statusClass = "good"; }
+                    else if (h.score >= 60) { statusLabel = "SATISFATÓRIO"; statusClass = "neutral"; }
+                    else if (h.score >= 40) { statusLabel = "DÉFICIT"; statusClass = "fair"; }
+                    else { statusLabel = "CRÍTICO"; statusClass = "critical"; }
+
+                    return `
+                        <div class="player-card ${statusClass}">
+                            <div class="player-card-header">
+                                <div class="player-card-id">
+                                    <span class="player-card-name">RODADA ${i + 1}</span>
+                                    <span class="status-badge ${statusClass}">${statusLabel}</span>
+                                </div>
+                                <div class="player-card-score">
+                                    <span class="score-num">${h.score}</span>
+                                    <span class="score-lbl">IMPACTO / 100</span>
+                                </div>
+                            </div>
+                            <div class="player-card-body">
+                                <p style="font-family: inherit; font-size: 0.95rem; line-height: 1.4; opacity: 0.9; margin: 0;">
+                                    ${h.scenarioText}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
 
             const readyBtn = document.getElementById('player-ready-btn');
-            const icon = readyBtn ? readyBtn.querySelector('.material-symbols-outlined') : null;
-            if (p.readyToRestart) {
-                readyBtn.classList.add('active');
-                if (icon) icon.innerText = 'check_box';
-            } else {
-                readyBtn.classList.remove('active');
-                if (icon) icon.innerText = 'check_box_outline_blank';
+            if (readyBtn) {
+                if (p.readyToRestart) {
+                    readyBtn.classList.add('active');
+                } else {
+                    readyBtn.classList.remove('active');
+                }
             }
         }
     }

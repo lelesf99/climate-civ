@@ -1,4 +1,5 @@
 import { GAME_DATA } from '../data.js';
+import { api } from '../services/api.js';
 
 export class GameUI {
     constructor(game, uiManager) {
@@ -16,9 +17,8 @@ export class GameUI {
         if (grid) {
             grid.innerHTML = uids.map(uid => {
                 return `
-                    <div class="player-status-badge">
+                    <div class="player-card">
                         <span class="player-name">${players[uid].name}</span>
-                        <div class="pulse-indicator"></div>
                     </div>
                 `;
             }).join('');
@@ -40,7 +40,7 @@ export class GameUI {
                 return `
                 <div class="player-status-badge ${p.submitted ? 'submitted' : ''} ${isBad ? 'critical' : ''}">
                     <span class="player-score">${p.score || 0}</span> ${isBad ? '<span class="status-badge bad">CRÍTICO</span>' : '<span class="status-badge good">ESTÁVEL</span>'}
-                    <span class="player-name">${p.continent}</span>
+                    <div class="player-name">${p.name}</div>
                     <div class="pulse-indicator"></div>    
                 </div>
                 `;
@@ -262,6 +262,9 @@ export class GameUI {
         if (!terminal) return;
         terminal.innerHTML = '';
 
+        this.terminalAnimId = (this.terminalAnimId || 0) + 1;
+        const currentId = this.terminalAnimId;
+
         const logs = [
             "[OK] Validating resource allocation (Σ == 100)...",
             "[SYSTEM] Serializing player state to JSON data packet...",
@@ -283,6 +286,8 @@ export class GameUI {
 
         let i = 0;
         const addLine = () => {
+            if (currentId !== this.terminalAnimId) return;
+
             if (i < logs.length) {
                 const line = document.createElement('div');
                 line.className = 'log-line';
@@ -300,12 +305,14 @@ export class GameUI {
             } else {
                 // Final messages after some delay
                 setTimeout(() => {
+                    if (currentId !== this.terminalAnimId) return;
                     const successLine = document.createElement('div');
                     successLine.className = 'log-line success';
                     successLine.innerText = "> DECISÃO ENVIADA COM SUCESSO.";
                     terminal.appendChild(successLine);
 
                     setTimeout(() => {
+                        if (currentId !== this.terminalAnimId) return;
                         const readyLine = document.createElement('div');
                         readyLine.className = 'log-line success';
                         readyLine.innerText = "> OUTROS LÍDERES PRONTOS PARA DELIBERAÇÃO.";

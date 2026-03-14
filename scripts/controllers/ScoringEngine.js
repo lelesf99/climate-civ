@@ -3,7 +3,7 @@ export class ScoringEngine {
         this.game = game;
     }
 
-    calculateImpactScore(resources, initiatives) {
+    calculateImpactScore(resources, initiatives, timeLeft = 0) {
         let totalDeviation = 0;
         initiatives.forEach(init => {
             const playerVal = resources[init.id] || 0;
@@ -13,7 +13,19 @@ export class ScoringEngine {
 
         // Max possible deviation is roughly 200
         const accuracy = Math.max(0, 1 - (totalDeviation / 150)); // 150 is a bit more forgiving
-        return Math.floor(accuracy * 100);
+        let score = Math.floor(accuracy * 100);
+
+        // --- Time Bonus ---
+        // Max timer is usually 90s.
+        // We reward up to +5 points for speed.
+        if (score > 0) { // Only give bonus if they actually tried to solve it
+            const maxBonus = 5;
+            const maxTime = 90; 
+            const timeBonus = Math.floor((timeLeft / maxTime) * maxBonus);
+            score += timeBonus;
+        }
+
+        return Math.min(100, score); // Cap at 100
     }
 
     getCategoryForRound(round, max) {

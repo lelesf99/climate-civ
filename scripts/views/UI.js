@@ -1,6 +1,7 @@
-import { LobbyUI } from './UI_modules/LobbyUI.js';
-import { GameUI } from './UI_modules/GameUI.js';
-import { ResultsUI } from './UI_modules/ResultsUI.js';
+import { LobbyUI } from './LobbyUI.js';
+import { GameUI } from './GameUI.js';
+import { ResultsUI } from './ResultsUI.js';
+import { store, GamePhase, Role } from '../store/gameState.js';
 
 export class UI {
     constructor(game) {
@@ -13,6 +14,43 @@ export class UI {
         this.resultsUI = new ResultsUI(game, this);
 
         this.initEventListeners();
+        this.initReactiveStore();
+    }
+
+    initReactiveStore() {
+        store.loading$.subscribe(isLoading => {
+            const loaders = ['login-loading', 'create-loading', 'sessions-loading'];
+            loaders.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) isLoading ? el.classList.remove('hidden') : el.classList.add('hidden');
+            });
+            
+            const btns = ['login-submit-btn', 'back-from-login-btn', 'join-session-btn', 'back-to-role-btn', 'create-session-btn'];
+            btns.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = isLoading;
+            });
+        });
+
+        store.phase$.subscribe(phase => {
+            if (phase === GamePhase.ROLE_SELECTION) this.showRoleSelection();
+            else if (phase === GamePhase.PLAYER_JOIN) this.showPlayerJoin();
+            else if (phase === GamePhase.TEACHER_SETUP) this.showTeacherSetup();
+            else if (phase === GamePhase.LOBBY) this.showPlayerLobby();
+        });
+
+        store.errors$.subscribe(err => {
+            alert("Erro: " + err);
+        });
+
+        store.notifications$.subscribe(msg => {
+            // Can be a toast later
+            alert(msg);
+        });
+
+        store.refreshSessions$.subscribe(() => {
+            this.loadTeacherSessions();
+        });
     }
 
     initEventListeners() {
@@ -62,13 +100,13 @@ export class UI {
 
         const cancelBtn = document.getElementById('cancel-session-btn');
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.game.cancelSession());
+            cancelBtn.addEventListener('click', () => this.game.sessionManager.cancelSession());
         }
 
         // Teacher Setup
         const createBtn = document.getElementById('create-session-btn');
         if (createBtn) {
-            createBtn.addEventListener('click', () => this.game.createSession());
+            createBtn.addEventListener('click', () => this.game.sessionManager.createSession());
         }
 
         const startBtn = document.getElementById('start-game-btn');
@@ -82,7 +120,7 @@ export class UI {
                 const code = document.getElementById('join-code-input').value;
                 const name = document.getElementById('player-name-input').value;
                 if (code.length === 4 && name.length >= 2) {
-                    this.game.joinMission(code, name);
+                    this.game.sessionManager.joinMission(code, name);
                 } else {
                     alert("Insira um código de 4 dígitos e um nome com pelo menos 2 letras.");
                 }
@@ -91,7 +129,7 @@ export class UI {
 
         const leaveBtn = document.getElementById('leave-session-btn');
         if (leaveBtn) {
-            leaveBtn.addEventListener('click', () => this.game.leaveMission());
+            leaveBtn.addEventListener('click', () => this.game.sessionManager.leaveMission());
         }
 
         // Session List Actions (Delegation)
@@ -105,13 +143,13 @@ export class UI {
                 if (reconnectBtn) {
                     const code = reconnectBtn.dataset.code;
                     console.warn("RECONNECT CLICKED:", code);
-                    this.game.reconnectSession(code);
+                    this.game.sessionManager.reconnectSession(code);
                 }
 
                 if (deleteBtn) {
                     const code = deleteBtn.dataset.code;
                     console.warn("DELETE CLICKED:", code);
-                    this.game.handleDeleteSession(code);
+                    this.game.sessionManager.handleDeleteSession(code);
                 }
             });
         }
@@ -258,15 +296,6 @@ export class UI {
         const timeStr = `${seconds}`;
         const t2 = document.getElementById('player-timer-display');
         if (t2) t2.innerText = timeStr;
-
-        if (seconds <= 10) {
-            if (t2) t2.classList.add('critical');
-            // Play alarm in last 10 seconds if not already playing
-            if (seconds === 10) this.game.audio.play('alarm');
-        } else {
-            if (t2) t2.classList.remove('critical');
-            this.game.audio.pause('alarm');
-        }
     }
 
     hideAll() {
