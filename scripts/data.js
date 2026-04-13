@@ -118,7 +118,7 @@ export const GAME_DATA = {
         // --- MID-GAME PRESENT (GOOD) (Estabilidade e Avanço) ---
         {
             "id": "mp_g_1", "category": "mid-game-present", "type": "good",
-            "text": "'Boom' de investimentos verdes impulsiona a economia; país vira exportador de tecnologia de carbono zero.",
+            "text": "Rare eaths potential. Your country has potential unexplored rare earths metals accros many reagions of your country, you should choose how would your country approach the research, exploration, and processing of these minerals.",
             "initiatives": [
                 { "id": "randd", "name": "P&D em Tecnologias de Descarbonização", "ideal": 40 },
                 { "id": "export", "name": "Fomento à Exportação Sustentável", "ideal": 30 },
