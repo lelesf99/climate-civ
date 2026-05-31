@@ -5,7 +5,7 @@
 	import RetroButton from '$lib/components/RetroButton.svelte';
 	import ButtonGroup from '$lib/components/ButtonGroup.svelte';
 	import { teacherLogin } from '$lib/services/auth.service';
-	import { authUser } from '$lib/stores/auth.store';
+	import { authUser, authLoading } from '$lib/stores/auth.store';
 	import { goto } from '$app/navigation';
 	import { CLOSE_SNACKBAR, snackbar } from '$lib/stores/snackbar.store';
 	import UndoDot from '@lucide/svelte/icons/undo-dot';
@@ -13,6 +13,13 @@
 
 	let emailValue = $state('');
 	let passwordValue = $state('');
+
+	$effect(() => {
+		if (!$authLoading && $authUser && !$authUser.isAnonymous) {
+			goto(`${base}/teacher/commandCenter/${$authUser.uid}`);
+		}
+	});
+
 	function handleSubmit(event: Event) {
 		event.preventDefault();
 		teacherLogin(emailValue, passwordValue)

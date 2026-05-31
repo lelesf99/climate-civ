@@ -24,6 +24,8 @@ export const isMuted = writable<boolean>(false);
 
 let sounds: Record<string, HTMLAudioElement> | null = null;
 let _isMuted = false;
+let _ambianceStarted = false;
+let _fadeAnimationId: number | null = null;
 
 isMuted.subscribe((v) => (_isMuted = v));
 
@@ -49,37 +51,57 @@ export function playSound(key: SoundKey, fadeDurationMs = 0): void {
 	if (!audio) return;
 
 	if (audio.loop) {
-		if (audio.paused) {
-			if (fadeDurationMs > 0 && !_isMuted) {
-				audio.volume = 0;
-				audio.play().catch((e) => console.warn('Audio play blocked', e));
-				
-				const targetVolume = DEFAULT_VOLUMES[key] ?? 0.5;
+		// For looping sounds (ambiance), only start once
+		if (_ambianceStarted && key === 'ambiance') return;
+
+		const targetVolume = DEFAULT_VOLUMES[key] ?? 0.5;
+
+		if (fadeDurationMs > 0) {
+			// Start silent and fade in
+			audio.volume = 0;
+			audio.muted = _isMuted;
+			audio.play().then(() => {
+				_ambianceStarted = true;
+
+				// Cancel any existing fade
+				if (_fadeAnimationId !== null) {
+					cancelAnimationFrame(_fadeAnimationId);
+				}
+
 				const startTime = performance.now();
-				
 				const fadeStep = (time: number) => {
 					const elapsed = time - startTime;
 					const progress = Math.min(elapsed / fadeDurationMs, 1);
+					// Always set the actual volume (muted property handles silencing)
 					audio.volume = progress * targetVolume;
-					
-					if (progress < 1 && !audio.paused && !_isMuted) {
-						requestAnimationFrame(fadeStep);
+
+					if (progress < 1 && !audio.paused) {
+						_fadeAnimationId = requestAnimationFrame(fadeStep);
+					} else {
+						_fadeAnimationId = null;
 					}
 				};
-				requestAnimationFrame(fadeStep);
-			} else {
-				audio.volume = _isMuted ? 0 : (DEFAULT_VOLUMES[key] ?? 0.5);
-				audio.play().catch((e) => console.warn('Audio play blocked', e));
-			}
+				_fadeAnimationId = requestAnimationFrame(fadeStep);
+			}).catch((e) => console.warn('Audio play blocked:', e));
+		} else {
+			audio.volume = _isMuted ? 0 : targetVolume;
+			audio.muted = _isMuted;
+			audio.play().then(() => {
+				_ambianceStarted = true;
+			}).catch((e) => console.warn('Audio play blocked:', e));
 		}
 		return;
 	}
 
+	// Non-looping sounds (click, success, fail, confirm)
+	if (_isMuted) return; // Don't play SFX when muted
+
 	if (audio.ended || audio.paused) {
+		audio.volume = DEFAULT_VOLUMES[key] ?? 0.5;
 		audio.play().catch((e) => console.warn('Audio play blocked', e));
 	} else {
 		const clone = audio.cloneNode() as HTMLAudioElement;
-		clone.volume = _isMuted ? 0 : (DEFAULT_VOLUMES[key] ?? 0.5);
+		clone.volume = DEFAULT_VOLUMES[key] ?? 0.5;
 		clone.play().catch((e) => console.warn('Audio play blocked', e));
 		clone.onended = () => clone.remove();
 	}
@@ -97,8 +119,18 @@ export function toggleMute(): boolean {
 
 	const all = ensureSounds();
 	for (const key in all) {
-		all[key].muted = next;
-		all[key].volume = next ? 0 : (DEFAULT_VOLUMES[key as SoundKey] ?? 0.5);
+		const audio = all[key];
+		audio.muted = next;
+
+		if (!next) {
+			// Unmuting: restore proper volume
+			audio.volume = DEFAULT_VOLUMES[key as SoundKey] ?? 0.5;
+
+			// If ambiance was started but got paused somehow, resume it
+			if (LOOPING_SOUNDS.includes(key as SoundKey) && audio.paused && _ambianceStarted) {
+				audio.play().catch((e) => console.warn('Audio resume blocked', e));
+			}
+		}
 	}
 
 	return next;

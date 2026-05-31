@@ -32,8 +32,12 @@
 	let defaults = $state<UserDefaults>({ maxRounds: 5, timerSeconds: 90, maxResources: 100 });
 	let scenarios = $state<Scenario[]>([]);
 	let allScenarios = $derived([
-		...GAME_DATA.scenarios.filter((s) => !defaults.hiddenScenarios?.includes(s.id)),
-		...scenarios
+		...[...scenarios].sort((a, b) => {
+			const timeA = a.lastUpdatedAt || 0;
+			const timeB = b.lastUpdatedAt || 0;
+			return timeB - timeA;
+		}),
+		...GAME_DATA.scenarios.filter((s) => !defaults.hiddenScenarios?.includes(s.id))
 	]);
 
 	let editingScenario = $state<Scenario | null>(null);
@@ -169,7 +173,10 @@
 		try {
 			const isDefault = GAME_DATA.scenarios.some((s) => s.id === editingScenarioOriginalId);
 			if (isDefault) {
-				defaults.hiddenScenarios = [...(defaults.hiddenScenarios || []), editingScenarioOriginalId!];
+				defaults.hiddenScenarios = [
+					...(defaults.hiddenScenarios || []),
+					editingScenarioOriginalId!
+				];
 				await saveUserDefaults(teacherUid, defaults);
 			} else {
 				if (editingScenarioOriginalId) {
@@ -276,10 +283,7 @@
 						</div>
 
 						<div class="form-group">
-							<RetroInput
-								label="Scenario ID"
-								bind:value={editingScenario.id}
-							/>
+							<RetroInput label="Scenario ID" bind:value={editingScenario.id} />
 						</div>
 
 						<div class="form-row">

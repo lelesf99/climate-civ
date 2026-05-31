@@ -29,7 +29,7 @@
 	import { GAME_DATA } from '$lib/data/gameData';
 	import type { SessionData, PlayerData } from '$lib/stores/game.store';
 	import { emitError, emitNotification } from '$lib/stores/snackbar.store';
-	import { playSound } from '$lib/services/audio.service';
+
 	import type { Unsubscribe } from 'firebase/database';
 	import Rocket from '@lucide/svelte/icons/rocket';
 	import Ban from '@lucide/svelte/icons/ban';
@@ -173,7 +173,7 @@
 		isProcessing = true;
 		try {
 			await startMission(teacherUid, sessionCode, localSession);
-			playSound('ambiance');
+
 		} catch (e: any) {
 			emitError(e.message || 'Failed to start mission.');
 		} finally {

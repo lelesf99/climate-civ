@@ -36,6 +36,7 @@ export interface Scenario {
 	text: string;
 	initiatives: Initiative[];
 	news?: NewsTemplates; // Optional news specific to this scenario
+	lastUpdatedAt?: number;
 }
 
 export interface RoundInfo {

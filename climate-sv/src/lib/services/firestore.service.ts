@@ -70,7 +70,7 @@ export async function saveTeacherScenario(uid: string, scenario: Scenario): Prom
 	
 	const docRef = doc(firestoreDB, 'scenarios', scenario.id);
 	// Ensure the document is bound to the teacherUid
-	const dataToSave = { ...scenario, teacherUid: uid };
+	const dataToSave = { ...scenario, teacherUid: uid, lastUpdatedAt: Date.now() };
 	
 	await setDoc(docRef, dataToSave);
 }
