@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import {
 		createSession,
@@ -46,7 +47,7 @@
 				loading.set(false);
 			}
 		} else {
-			goto('/teacher/commandCenter');
+			goto(`${base}/teacher/commandCenter`);
 		}
 	});
 
@@ -68,7 +69,7 @@
 			};
 
 			const code = await createSession($authUser.uid, gameDataOverride as any);
-			goto(`/teacher/commandCenter/${$authUser.uid}/${code}`);
+			goto(`${base}/teacher/commandCenter/${$authUser.uid}/${code}`);
 		} catch (error) {
 			emitError('Failed to create session');
 		} finally {
@@ -78,7 +79,7 @@
 
 	function handleReconnect(code: string) {
 		if (!$authUser) return;
-		goto(`/teacher/commandCenter/${$authUser.uid}/${code}`);
+		goto(`${base}/teacher/commandCenter/${$authUser.uid}/${code}`);
 	}
 
 	async function handleDelete(code: string) {
@@ -94,7 +95,7 @@
 	async function logout() {
 		try {
 			await teacherLogOut();
-			goto('/');
+			goto(`${base}/`);
 		} catch (error) {
 			emitError('Logout failed');
 		}
@@ -106,7 +107,7 @@
 
 	<ButtonGroup>
 		<RetroButton danger onclick={logout}><LogOut /> LogOut</RetroButton>
-		<RetroButton secondary onclick={() => goto(`/teacher/commandCenter/${teacherUid}/config`)}>
+		<RetroButton secondary onclick={() => goto(`${base}/teacher/commandCenter/${teacherUid}/config`)}>
 			<Settings /> Config
 		</RetroButton>
 	</ButtonGroup>

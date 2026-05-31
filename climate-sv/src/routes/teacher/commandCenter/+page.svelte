@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import RetroInput from '$lib/components/RetroInput.svelte';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -22,7 +23,7 @@
 				// Atualiza o estado global do usuário autenticado
 				authUser.set(user);
 				// Redireciona para a página do Command Center
-				goto(`/teacher/commandCenter/${user.uid}`);
+				goto(`${base}/teacher/commandCenter/${user.uid}`);
 			})
 			.catch((error) => {
 				// Tratar erros de login
@@ -65,7 +66,7 @@
 			required
 		/>
 		<ButtonGroup>
-			<RetroButton secondary btnLink href="/"><UndoDot /> Back</RetroButton>
+			<RetroButton secondary btnLink href="{base}/"><UndoDot /> Back</RetroButton>
 			<RetroButton type="submit"><Send/> Submit</RetroButton>
 		</ButtonGroup>
 	</form>

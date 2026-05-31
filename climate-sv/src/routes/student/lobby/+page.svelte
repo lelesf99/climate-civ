@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -27,7 +28,7 @@
 		const host = get(hostUid);
 
 		if (!code || !host) {
-			goto('/student');
+			goto(`${base}/student`);
 			return;
 		}
 
@@ -36,7 +37,7 @@
 				// Session was deleted
 				emitError('The session was ended by the teacher.');
 				resetGameStore();
-				goto('/student');
+				goto(`${base}/student`);
 				return;
 			}
 
@@ -49,12 +50,12 @@
 			if (data.status === 'active') {
 				const player = data.players?.[myUid!];
 				if (player && !player.isWaiting) {
-					goto('/student/game');
+					goto(`${base}/student/game`);
 				}
 			} else if (data.status === 'results') {
-				goto('/student/results');
+				goto(`${base}/student/results`);
 			} else if (data.status === 'finished') {
-				goto('/student/end');
+				goto(`${base}/student/end`);
 			}
 		});
 	});
@@ -76,7 +77,7 @@
 			localStorage.removeItem('climateCivSessionCode');
 			localStorage.removeItem('climateCivHostUid');
 			resetGameStore();
-			goto('/student');
+			goto(`${base}/student`);
 		} catch (e: any) {
 			emitError(e.message || 'Failed to leave session.');
 		}

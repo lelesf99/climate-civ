@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -33,7 +34,7 @@
 		const host = get(hostUid);
 
 		if (!code || !host) {
-			goto('/student');
+			goto(`${base}/student`);
 			return;
 		}
 
@@ -41,7 +42,7 @@
 			if (!data) {
 				emitError('The session was ended by the teacher.');
 				resetGameStore();
-				goto('/student');
+				goto(`${base}/student`);
 				return;
 			}
 
@@ -49,11 +50,11 @@
 			sessionData.set(data);
 
 			if (data.status === 'active') {
-				goto('/student/game');
+				goto(`${base}/student/game`);
 			} else if (data.status === 'finished') {
-				goto('/student/end');
+				goto(`${base}/student/end`);
 			} else if (data.status === 'waiting') {
-				goto('/student/lobby');
+				goto(`${base}/student/lobby`);
 			}
 		});
 	});

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import ResourceSlider from '$lib/components/ResourceSlider.svelte';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -139,7 +140,7 @@
 		const myUid = get(uid);
 
 		if (!code || !host || !myUid) {
-			goto('/student');
+			goto(`${base}/student`);
 			return;
 		}
 
@@ -149,7 +150,7 @@
 			if (!data) {
 				emitError('The session was ended by the teacher.');
 				resetGameStore();
-				goto('/student');
+				goto(`${base}/student`);
 				return;
 			}
 
@@ -169,11 +170,11 @@
 					}
 				}
 			} else if (data.status === 'results') {
-				goto('/student/results');
+				goto(`${base}/student/results`);
 			} else if (data.status === 'finished') {
-				goto('/student/end');
+				goto(`${base}/student/end`);
 			} else if (data.status === 'waiting') {
-				goto('/student/lobby');
+				goto(`${base}/student/lobby`);
 			}
 		});
 

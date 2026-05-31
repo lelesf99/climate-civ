@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import PlayerCard from '$lib/components/PlayerCard.svelte';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -137,7 +138,7 @@
 			unsubscribe = onSessionUpdate(teacherUid, sessionCode, (data) => {
 				if (!data) {
 					emitNotification('Session has been deleted.');
-					goto(`/teacher/commandCenter/${teacherUid}`);
+					goto(`${base}/teacher/commandCenter/${teacherUid}`);
 					return;
 				}
 
@@ -186,7 +187,7 @@
 		isProcessing = true;
 		try {
 			await cancelSession(teacherUid, sessionCode);
-			goto(`/teacher/commandCenter/${teacherUid}`);
+			goto(`${base}/teacher/commandCenter/${teacherUid}`);
 		} catch (e: any) {
 			emitError(e.message || 'Failed to cancel session.');
 		} finally {

@@ -2,6 +2,7 @@
 	import { T, useTask } from '@threlte/core';
 	import { CameraControls, useGltf } from '@threlte/extras';
 	import { Spring } from 'svelte/motion';
+	import { base } from '$app/paths';
 
 	let { rotationSwitch = false } = $props();
 	let rotation = $state({ x: 0, y: 0, z: 0 });
@@ -38,7 +39,7 @@
 	}
 </script>
 
-{#await useGltf('/globe.glb') then gltf}
+{#await useGltf(`${base}/globe.glb`) then gltf}
 	<T
 		is={gltf.scene}
 		position={[5, -15, 0]}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -193,7 +194,7 @@
 
 <div class="config-layout">
 	<header class="config-header">
-		<RetroButton mini onclick={() => goto(`/teacher/commandCenter/${teacherUid}`)}>
+		<RetroButton mini onclick={() => goto(`${base}/teacher/commandCenter/${teacherUid}`)}>
 			<ArrowLeft /> Back
 		</RetroButton>
 		<GlitchyTitle>SYSTEM CONFIGURATION</GlitchyTitle>

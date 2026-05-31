@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import GlitchyTitle from '$lib/components/GlitchyTitle.svelte';
 	import RetroInput from '$lib/components/RetroInput.svelte';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -59,7 +60,7 @@
 			storage.setItem('climateCivSessionCode', codeValue);
 			storage.setItem('climateCivHostUid', host);
 
-			goto('/student/lobby');
+			goto(`${base}/student/lobby`);
 		} catch (e: any) {
 			emitError(e.message || 'Failed to join session.');
 		} finally {
@@ -98,7 +99,7 @@
 		{/if}
 
 		<ButtonGroup>
-			<RetroButton secondary btnLink href="/">
+			<RetroButton secondary btnLink href="{base}/">
 				<UndoDot /> Back
 			</RetroButton>
 			<RetroButton type="submit" disabled={$loading}>
