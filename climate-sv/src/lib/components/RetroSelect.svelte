@@ -1,11 +1,25 @@
 <script lang="ts">
-	let { label = '', name = 'select-name', value = $bindable(), options = [], ...others } = $props<{
+	import { playSound } from '$lib/services/audio.service';
+	let {
+		label = '',
+		name = 'select-name',
+		value = $bindable(),
+		options = [],
+		onfocus,
+		...others
+	} = $props<{
 		label?: string;
 		name?: string;
 		value: any;
 		options: { label: string; value: any }[];
+		onfocus?: (e: Event) => void;
 		[key: string]: any;
 	}>();
+
+	function handleFocus(e: any) {
+		playSound('click');
+		if (onfocus) onfocus(e);
+	}
 </script>
 
 <div class="retro-select-container">
@@ -13,7 +27,7 @@
 		<label for={name}>{label}</label>
 	{/if}
 	<div class="select-wrapper">
-		<select class="retro-select" {name} {...others} bind:value>
+		<select class="retro-select" {name} bind:value onfocus={handleFocus} {...others}>
 			{#each options as option}
 				<option value={option.value}>{option.label}</option>
 			{/each}
@@ -78,10 +92,10 @@
 		outline-offset: -4px;
 		transform: translateX(10px);
 	}
-	
+
 	/* Custom arrow */
 	.select-wrapper::after {
-		content: "▼";
+		content: '▼';
 		position: absolute;
 		right: 1.5rem;
 		top: 50%;

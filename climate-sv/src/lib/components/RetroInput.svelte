@@ -1,12 +1,18 @@
 <script lang="ts">
-	let { label = '', name = 'input-name', type = 'text', value = $bindable(), ...others } = $props();
+	import { playSound } from '$lib/services/audio.service';
+	let { label = '', name = 'input-name', type = 'text', value = $bindable(), onfocus, ...others } = $props();
+
+	function handleFocus(e: any) {
+		playSound('click');
+		if (onfocus) onfocus(e);
+	}
 </script>
 
 <div class="retro-input-container">
 	{#if label}
 		<label for={name}>{label}</label>
 	{/if}
-	<input class="retro-input" {type} {name} {...others} bind:value />
+	<input class="retro-input" {type} {name} bind:value onfocus={handleFocus} {...others} />
 </div>
 
 <style>

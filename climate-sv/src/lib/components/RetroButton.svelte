@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { playSound } from '$lib/services/audio.service';
+
 	let {
 		children,
 		btnLink = false,
@@ -7,17 +9,36 @@
 		danger = false,
 		muted = false,
 		mini = false,
+		onclick,
+		onfocus,
+		onblur,
 		...others
 	} = $props();
 	let active = $state(false);
+
+	function handleClick(e: any) {
+		playSound('click');
+		if (onclick) onclick(e);
+	}
+
+	function handleFocus(e: any) {
+		active = true;
+		if (onfocus) onfocus(e);
+	}
+
+	function handleBlur(e: any) {
+		active = false;
+		if (onblur) onblur(e);
+	}
 </script>
 
 <svelte:element
 	this={btnLink ? 'a' : 'button'}
 	href={btnLink ? href : undefined}
 	class={['retro-btn', { secondary, danger, muted, mini }]}
-	onfocus={() => (active = true)}
-	onblur={() => (active = false)}
+	onfocus={handleFocus}
+	onblur={handleBlur}
+	onclick={handleClick}
 	{...others}
 >
 	{@render children()}

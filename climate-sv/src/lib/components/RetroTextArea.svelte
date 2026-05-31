@@ -1,12 +1,18 @@
 <script lang="ts">
-	let { label = '', name = 'textarea-name', value = $bindable(), rows = 4, ...others } = $props();
+	import { playSound } from '$lib/services/audio.service';
+	let { label = '', name = 'textarea-name', value = $bindable(), rows = 4, onfocus, ...others } = $props();
+
+	function handleFocus(e: any) {
+		playSound('click');
+		if (onfocus) onfocus(e);
+	}
 </script>
 
 <div class="retro-textarea-container">
 	{#if label}
 		<label for={name}>{label}</label>
 	{/if}
-	<textarea class="retro-textarea" {name} {rows} {...others} bind:value></textarea>
+	<textarea class="retro-textarea" {name} {rows} bind:value onfocus={handleFocus} {...others}></textarea>
 </div>
 
 <style>

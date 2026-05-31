@@ -177,8 +177,6 @@
 				goto(`${base}/student/lobby`);
 			}
 		});
-
-		playSound('ambiance');
 	});
 
 	onDestroy(() => {

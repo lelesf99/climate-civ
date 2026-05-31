@@ -149,7 +149,6 @@
 					if (data.round !== lastSyncedRound) {
 						lastSyncedRound = data.round;
 						startTimer();
-						playSound('ambiance');
 						generateNews(6);
 					}
 

@@ -11,7 +11,7 @@ const SOUND_PATHS: Record<SoundKey, string> = {
 };
 
 const DEFAULT_VOLUMES: Record<SoundKey, number> = {
-	ambiance: 0.5,
+	ambiance: 0.15,
 	click: 0.1,
 	confirm: 0.5,
 	fail: 0.5,
@@ -43,16 +43,34 @@ function ensureSounds(): Record<string, HTMLAudioElement> {
 	return sounds;
 }
 
-export function playSound(key: SoundKey): void {
+export function playSound(key: SoundKey, fadeDurationMs = 0): void {
 	const all = ensureSounds();
 	const audio = all[key];
 	if (!audio) return;
 
-	audio.volume = _isMuted ? 0 : (DEFAULT_VOLUMES[key] ?? 0.5);
-
 	if (audio.loop) {
 		if (audio.paused) {
-			audio.play().catch((e) => console.warn('Audio play blocked', e));
+			if (fadeDurationMs > 0 && !_isMuted) {
+				audio.volume = 0;
+				audio.play().catch((e) => console.warn('Audio play blocked', e));
+				
+				const targetVolume = DEFAULT_VOLUMES[key] ?? 0.5;
+				const startTime = performance.now();
+				
+				const fadeStep = (time: number) => {
+					const elapsed = time - startTime;
+					const progress = Math.min(elapsed / fadeDurationMs, 1);
+					audio.volume = progress * targetVolume;
+					
+					if (progress < 1 && !audio.paused && !_isMuted) {
+						requestAnimationFrame(fadeStep);
+					}
+				};
+				requestAnimationFrame(fadeStep);
+			} else {
+				audio.volume = _isMuted ? 0 : (DEFAULT_VOLUMES[key] ?? 0.5);
+				audio.play().catch((e) => console.warn('Audio play blocked', e));
+			}
 		}
 		return;
 	}

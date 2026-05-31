@@ -6,7 +6,7 @@
 	import './global.css';
 	import Snackbar from '$lib/components/Snackbar.svelte';
 	import { setLucideProps } from '@lucide/svelte';
-	import { toggleMute, isMuted } from '$lib/services/audio.service';
+	import { toggleMute, isMuted, playSound } from '$lib/services/audio.service';
 	import Volume2 from '@lucide/svelte/icons/volume-2';
 	import VolumeOff from '@lucide/svelte/icons/volume-off';
 	import RetroButton from '$lib/components/RetroButton.svelte';
@@ -16,6 +16,21 @@
 	let sceneRef: any = $state(null);
 
 	import { uid, sessionData } from '$lib/stores/game.store';
+
+	onMount(() => {
+		const startAudio = () => {
+			playSound('ambiance', 3000);
+			window.removeEventListener('click', startAudio);
+			window.removeEventListener('keydown', startAudio);
+		};
+		window.addEventListener('click', startAudio);
+		window.addEventListener('keydown', startAudio);
+		
+		return () => {
+			window.removeEventListener('click', startAudio);
+			window.removeEventListener('keydown', startAudio);
+		};
+	});
 
 	$effect(() => {
 		if (sceneRef && $uid && $sessionData) {

@@ -7,6 +7,7 @@
 	import User from '@lucide/svelte/icons/user';
 	import { base } from '$app/paths';
 
+
 	const tutorialSteps = [
 		{
 			title: 'The challenge',
