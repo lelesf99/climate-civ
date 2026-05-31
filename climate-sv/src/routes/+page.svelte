@@ -5,6 +5,7 @@
 	import TutorialCard from '$lib/components/TutorialCard.svelte';
 	import UserLock from '@lucide/svelte/icons/user-lock';
 	import User from '@lucide/svelte/icons/user';
+	import { base } from '$app/paths';
 
 	const tutorialSteps = [
 		{
@@ -36,10 +37,10 @@
 		>The climate management simulation for leaders of the future.</GlitchyTitle
 	>
 	<ButtonGroup>
-		<RetroButton secondary btnLink href="${base}/teacher/commandCenter">
+		<RetroButton secondary btnLink href="{base}/teacher/commandCenter">
 			<UserLock />Teacher</RetroButton
 		>
-		<RetroButton btnLink href="${base}/student"><User />Student</RetroButton>
+		<RetroButton btnLink href="{base}/student"><User />Student</RetroButton>
 	</ButtonGroup>
 	<section class="tutorial-section">
 		<h2>How to Play</h2>
