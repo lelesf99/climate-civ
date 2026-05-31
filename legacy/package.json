@@ -1,0 +1,22 @@
+{
+  "name": "climate-civ",
+  "version": "1.0.0",
+  "description": "Climate Civ Game",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0",
+    "serve": "^14.2.1",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "firebase": "^12.10.0",
+    "rxjs": "^7.8.2",
+    "three": "^0.183.2"
+  }
+}

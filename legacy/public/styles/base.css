@@ -1,0 +1,124 @@
+/* ==========================================================================
+   1. VARIABLES & CORE
+   ========================================================================== */
+:root {
+    --teal: hsl(188, 86%, 53%);
+    --blue: hsl(222, 47%, 51%);
+    --orange: hsl(21, 90%, 48%);
+    --green: hsl(160, 84%, 39%);
+    --error-color: hsl(0, 84%, 60%);
+
+    --gold: hsl(54, 100%, 50%);
+    --silver: hsl(0, 0%, 80%);
+    --bronze: hsl(25, 100%, 40%);
+
+    --dark-teal: hsl(187, 84%, 10%);
+    --dark-blue: hsl(222, 47%, 11%);
+    --dark-orange: hsl(21, 90%, 10%);
+    --dark-green: hsl(160, 84%, 9%);
+    --dark-error-color: hsl(0, 84%, 20%);
+
+    --muted-teal: hsla(187, 84%, 10%, .5);
+    --muted-blue: hsla(222, 47%, 11%, .5);
+    --muted-orange: hsla(21, 90%, 10%, .5);
+    --muted-green: hsla(160, 84%, 9%, .5);
+    --muted-error-color: hsla(0, 84%, 20%, .5);
+
+    --bg-teal: hsla(188, 86%, 43%, 0.4);
+    --bg-blue: hsl(222, 47%, 41%, 0.4);
+    --bg-orange: hsl(21, 90%, 38%, 0.4);
+    --bg-green: hsl(160, 84%, 29%, 0.4);
+    --bg-error-color: hsl(0, 84%, 50%, 0.4);
+
+    --panel-border: 1px solid var(--teal);
+
+    /* Cyan */
+    --text-color: #ccfbf1;
+    --font-head: 'Orbitron', sans-serif;
+    --font-body: 'Electrolize', sans-serif;
+
+    --chromatic-text: 2px 2px 1px var(--orange),
+        -2px -2px 1px var(--teal),
+        0 0 5px var(--teal);
+}
+
+/* ==========================================================================
+   2. LAYOUT & SCROLLING
+   ========================================================================== */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--dark-blue);
+    color: var(--text-color);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* Start from top so scrolling works naturally */
+    box-sizing: border-box;
+}
+
+#app {
+    width: 95%;
+    height: 95%;
+
+    background-color: var(--muted-blue);
+    border: var(--panel-border);
+    border-radius: 4px;
+    box-shadow: var(--muted-blue);
+    backdrop-filter: blur(5px);
+
+    padding: 3rem;
+    margin: 1rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+
+    /* Dynamic scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: backdrop-filter 0.5s, background-color 0.5s;
+}
+
+#app.clear-app {
+    backdrop-filter: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.screen {
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    animation: slideIn .3s ease-out;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#globe-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    /* Behind the UI */
+    background: radial-gradient(circle at center, #001a1a 0%, #000000 100%);
+    pointer-events: none;
+    /* Let clicks pass through to UI */
+}
+
+.glitch {
+    position: relative;
+    display: inline-block;
+    color: var(--text-color);
+    text-shadow: var(--chromatic-text);
+}

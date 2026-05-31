@@ -1,32 +1,19 @@
-rules_version = '2';
+rules_version = '3';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Match any session document
-    match /sessions/{sessionId} {
-      // READ: Anyone can read a session if they have the ID (the 4-digit code)
-      allow read: if true;
+    // USER DEFAULTS
+    // Only the authenticated user can read/write their own default configs
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
 
-      // CREATE: Only teachers (email/password) can create sessions
-      allow create: if request.auth != null && 
-        request.auth.token.firebase.sign_in_provider == 'password' &&
-        request.resource.data.hostId == request.auth.uid;
-
-      // UPDATE: 
-      allow update: if request.auth != null && (
-        // 1. Teacher can update game state
-        (request.auth.token.firebase.sign_in_provider == 'password' && 
-         resource.data.hostId == request.auth.uid &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scenarioId', 'timer', 'round', 'players'])) ||
-        
-        // 2. Players (Anonymous or Password) can update their own data in 'players' map
-        (request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
-         request.resource.data.players.get(request.auth.uid, null) != null)
-      );
-
-      // DELETE: Only the host (teacher) can delete their own session
-      allow delete: if request.auth != null && 
-        request.auth.token.firebase.sign_in_provider == 'password' && 
-        resource.data.hostId == request.auth.uid;
+    // CUSTOM SCENARIOS
+    // Only the authenticated teacher can read, create, update or delete their own scenarios
+    match /scenarios/{scenarioId} {
+      // Allows read if the scenario belongs to the user
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.teacherUid;
+      // Allows creation only if the user is assigning their own uid
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.teacherUid;
     }
   }
 }

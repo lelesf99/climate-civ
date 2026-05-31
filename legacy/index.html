@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civilização Climática</title>
+    <link rel="stylesheet" href="styles/globe.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Electrolize&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+    <!-- CSS Links (Render-blocking prevents FOUC natively) -->
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/utility.css">
+    <link rel="stylesheet" href="styles/ui.css">
+    <link rel="stylesheet" href="styles/effects.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <link rel="stylesheet" href="styles/screens/landing.css">
+    <link rel="stylesheet" href="styles/screens/teacher.css">
+    <link rel="stylesheet" href="styles/screens/player.css">
+</head>
+
+<body>
+
+    <div id="scanline"></div>
+    <div id="globe-container"></div>
+    <div id="app">
+        <!-- ROLE SELECTION -->
+        <div id="role-screen" class="screen active">
+            <header class="hero-section">
+                <h1 class="glitch" data-text="CLIMATE CIV">CIVILIZAÇÃO CLIMÁTICA</h1>
+                <p class="tagline">O SIMULADOR DE GESTÃO CLIMÁTICA PARA LÍDERES DO FUTURO</p>
+            </header>
+
+            <div id="role-buttons" class="button-group">
+                <button id="teacher-role-btn" class="retro-btn retro-btn-secondary"><span
+                        class="material-symbols-outlined">supervisor_account</span> Professor</button>
+                <button id="player-role-btn" class="retro-btn"><span
+                        class="material-symbols-outlined">sports_esports</span> Aluno</button>
+            </div>
+
+            <section class="tutorial-section">
+                <h2>COMO JOGAR</h2>
+                <div class="tutorial-steps">
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">01</span>
+                            <h3>O DESAFIO</h3>
+                        </div>
+                        <p>Você é o líder de uma nação no ano 2025. O clima está mudando e sua missão é garantir a
+                            sobrevivência e o progresso da sua civilização até o ano 2100.</p>
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">02</span>
+                            <h3>ALOCAÇÃO DE RECURSOS</h3>
+                        </div>
+                        <p>A cada rodada, você recebe 100 créditos. Use os sliders para distribuir esse valor entre 5
+                            iniciativas. Escolha bem onde investir mais!</p>
+                        <!-- <img src="assets/tutorial/step2.png" alt="Sliders de Recursos" class="tutorial-img"> -->
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">03</span>
+                            <h3>CONSEQUÊNCIAS</h3>
+                        </div>
+                        <p>Seus investimentos geram uma pontuação. Pontuações baixas podem levar a desastres e crises
+                            crimáticas, enquanto pontuações altas trazem estabilidade.</p>
+                        <!-- <img src="assets/tutorial/step3.png" alt="Resultado da Rodada" class="tutorial-img"> -->
+                    </div>
+
+                    <div class="tutorial-step" tabindex="0">
+                        <div class="step-header">
+                            <span class="step-number">04</span>
+                            <h3>O VEREDITO</h3>
+                        </div>
+                        <p>Após 5 rodadas, veremos o legado da sua gestão. Sua civilização alcançará a Utopia Verde ou o
+                            Colapso Total?</p>
+                        <!-- <img src="assets/tutorial/step4.png" alt="Resultado Final" class="tutorial-img"> -->
+                    </div>
+                </div>
+            </section>
+
+            <footer class="main-footer">
+                <p>&copy; 2026 Leles Tecnologia LTDA. Todos os direitos reservados.</p>
+                <p>Licenciado para uso educacional.</p>
+            </footer>
+        </div>
+
+        <!-- TEACHER LOGIN -->
+        <div id="teacher-login-screen" class="screen hidden">
+            <h1 class="glitch">CENTRO DE COMANDO</h1>
+
+            <div class="warning-ticker">
+                <span class="warning-sign">!! ACESSO RESTRITO !!</span>
+            </div>
+
+            <div class="login-form-container">
+                <div class="input-group">
+                    <label for="teacher-email">E-MAIL</label>
+                    <input class="retro-input" type="email" id="teacher-email" placeholder="seu@email.com" required
+                        aria-label="E-mail do Professor">
+                </div>
+                <div class="input-group">
+                    <label for="teacher-password">SENHA</label>
+                    <input class="retro-input" type="password" id="teacher-password" placeholder="••••••••" required
+                        aria-label="Senha do Professor">
+                </div>
+
+                <div class="button-group">
+                    <button id="back-from-login-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                            class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                    <button id="login-submit-btn" class="retro-btn"><span class="material-symbols-outlined">login</span>
+                        ENTRAR</button>
+                </div>
+
+            </div>
+            <p id="login-status-msg" class="status-msg"></p>
+
+            <div id="login-loading" class="loading-container hidden">
+                <div class="loading-bar"></div>
+                <p>Verificando credenciais...</p>
+            </div>
+        </div>
+
+        <!-- TEACHER SETUP / CONTROL CENTER -->
+        <div id="teacher-setup-screen" class="screen hidden">
+            <h1>CENTRO DE COMANDO</h1>
+            <div id="session-info" class="hidden">
+                <div class="mission-code-card">
+                    <p class="session-label">CÓDIGO DA MISSÃO</p>
+                    <h2 id="session-code-display" class="glitch mission-code">----</h2>
+                    <p class="status-text">AGUARDANDO LÍDERES | <span id="player-count">0</span>/6 CONECTADOS</p>
+                </div>
+
+                <div class="teacher-lobby-grid" id="teacher-lobby-grid">
+                    <!-- Player cards injected by JS -->
+                </div>
+
+                <div class="button-group">
+                    <button id="cancel-session-btn" class="retro-btn retro-btn-danger"><span
+                            class="material-symbols-outlined">cancel</span> CANCELAR</button>
+                    <button id="start-game-btn" class="retro-btn" disabled><span
+                            class="material-symbols-outlined">rocket_launch</span> INICIAR MISSÃO</button>
+                </div>
+            </div>
+            <div id="teacher-initial-actions" class="button-group">
+                <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                        class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                <button id="create-session-btn" class="retro-btn"><span
+                        class="material-symbols-outlined">add_circle</span> NOVA SESSÃO</button>
+                <div id="create-loading" class="loading-container hidden">
+                    <div class="loading-bar"></div>
+                    <p>Sincronizando com o satélite...</p>
+                </div>
+            </div>
+            <div class="reconnect-container" id="teacher-sessions-container">
+                <h2>SESSÕES ATIVAS</h2>
+                <p>Continue uma missão em andamento ou gerencie suas sessões.</p>
+                <div class="input-group">
+                    <div id="sessions-loading" class="loading-container hidden">
+                        <div class="loading-bar"></div>
+                    </div>
+                    <div id="teacher-sessions-list" class="sessions-list">
+                        <!-- Sessions injected by JS -->
+                        <p class="empty-msg">Nenhuma sessão ativa encontrada.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLAYER JOIN -->
+        <div id="player-join-screen" class="screen hidden">
+            <h1 class="glitch">ENTRAR NA MISSÃO</h1>
+
+            <div class="login-form-container">
+                <div class="input-group">
+                    <label for="join-code-input">CÓDIGO DA MISSÃO</label>
+                    <input class="retro-input" type="text" id="join-code-input" placeholder="0000" maxlength="4"
+                        required aria-label="Código da Sessão">
+                </div>
+                <div class="input-group">
+                    <label for="player-name-input">NOME DO LÍDER</label>
+                    <input class="retro-input" type="text" id="player-name-input" placeholder="Meu Nome" maxlength="12"
+                        required aria-label="Nome do Jogador">
+                </div>
+
+                <div class="button-group">
+                    <button id="back-to-role-btn" class="retro-btn retro-btn-secondary return-btn"><span
+                            class="material-symbols-outlined">arrow_back</span> VOLTAR</button>
+                    <button id="join-session-btn" class="retro-btn"><span class="material-symbols-outlined">login</span>
+                        CONECTAR</button>
+                </div>
+            </div>
+            <p id="join-status"></p>
+        </div>
+
+        <!-- PLAYER LOBBY -->
+        <div id="player-lobby-screen" class="screen hidden">
+            <h1>PREPARANDO MISSÃO</h1>
+            <p>Você está conectado! Aguardando o professor iniciar a missão.</p>
+
+            <div class="lobby-container">
+                <h2>LÍDERES CONECTADOS:</h2>
+                <ul id="lobby-players-list" class="lobby-list">
+                    <!-- Players injected by JS -->
+                </ul>
+            </div>
+
+            <div class="button-group">
+                <button id="leave-session-btn" class="retro-btn retro-btn-secondary"><span
+                        class="material-symbols-outlined">logout</span> SAIR DA SESSÃO</button>
+            </div>
+        </div>
+
+        <!-- MAIN GAME SCREEN (TEACHER VIEW) -->
+        <div id="teacher-game-screen" class="screen hidden">
+            <h1 id="mission-code-header">Missão: </h1>
+            <div id="status-card-container">
+                <!-- Status cards injected by JS -->
+            </div>
+            <div id="player-status-grid" class="player-status-grid">
+                <!-- Player status cards injected by JS -->
+            </div>
+        </div>
+
+        <!-- PLAYER INTERACTION SCREEN -->
+        <div id="player-game-screen" class="screen hidden">
+            <div class="player-hud">
+                <span id="player-timer-display">90</span>
+                <div id="resource-allocation-container">
+                    <p id="player-scenario-brief"></p>
+
+                    <div id="resource-pool">RECURSOS DISPONÍVEIS: <span id="remaining-resources">100</span></div>
+                    <div id="sliders-container">
+                        <!-- 5 Sliders injected by JS -->
+                    </div>
+
+                </div>
+                <div id="presidential-btn-container">
+                    <button id="submit-allocation-btn" class="big-red-btn">
+                        <span class="btn-icon">●</span>
+                    </button>
+                    <div class="btn-label">
+                        <span>CONFIRMAR DECISÃO <span class="key-hint">ESPAÇO</span></span>
+                    </div>
+                </div>
+
+                <div id="wait-message" class="hidden">
+                    <div class="terminal-wrapper">
+                        <div id="terminal-logs"></div>
+                        <div class="terminal-cursor">_</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROUND RESULTS SCREEN (PLAYER) -->
+        <div id="round-results-screen" class="screen hidden">
+            <h1>RESULTADO DA RODADA <span id="results-round-number">1</span></h1>
+
+            <div class="player-feedback">
+                <div class="round-score-display">
+                    <span class="score-label">PONTUAÇÃO TOTAL</span>
+                    <span id="total-score" class="score-value">0</span>
+                </div>
+
+                <div id="performance-feedback" class="feedback-message">
+                    <!-- Status injected by JS -->
+                </div>
+
+                <div id="initiative-breakdown" class="initiative-breakdown">
+                    <!-- Initiative precision details injected by JS -->
+                </div>
+
+                <p class="waiting-text">Aguardando próxima rodada...</p>
+            </div>
+        </div>
+
+        <!-- ROUND RESULTS SCREEN (TEACHER) -->
+        <div id="teacher-results-screen" class="screen hidden">
+            <h1>ANÁLISE DA RODADA <span id="teacher-results-round-number">1</span></h1>
+
+            <div class="results-grid" id="results-player-grid">
+                <!-- Player result cards injected by JS -->
+            </div>
+
+            <div class="button-group">
+                <button id="next-round-btn" class="retro-btn"><span class="material-symbols-outlined">skip_next</span>
+                    PRÓXIMA RODADA</button>
+            </div>
+        </div>
+
+        <!-- END SCREEN -->
+        <div id="end-screen" class="screen hidden">
+            <h1>MISSIÃO CONCLUÍDA</h1>
+
+            <!-- Teacher specific end view -->
+            <div id="teacher-end-view" class="hidden">
+                <div id="analytics-container">
+                    <h2>Resultados</h2>
+                    <div id="player-outcomes-grid">
+                        <!-- Individual player cards with status injected by JS -->
+                    </div>
+                </div>
+                <div id="restart-lobby">
+                    <h3>PREPARAÇÃO PARA NOVA MISSÃO</h3>
+                    <div id="player-ready-grid"></div>
+                    <button id="teacher-restart-btn" class="retro-btn" disabled><span
+                            class="material-symbols-outlined">restart_alt</span> REINICIAR SISTEMAS</button>
+                </div>
+            </div>
+
+            <!-- Player specific end view -->
+            <div id="player-end-view" class="hidden">
+                <div id="personal-rundown">
+                    <div id="player-score-banner"></div>
+                    <div id="scenario-history">
+                        <!-- History items injected by JS -->
+                    </div>
+                </div>
+                <button id="player-ready-btn" class="retro-btn retro-btn-toggle">
+                    PRONTO PARA NOVA MISSÃO</button>
+                <div id="player-ready-msg" class="hidden"></div>
+            </div>
+        </div>
+
+        <!-- Top Right Controls (Logoff - Teacher Only) -->
+        <div id="teacher-controls" class="hidden" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+            <button id="teacher-logout-btn" class="retro-btn icon-btn retro-btn-danger"
+                style="border-color: var(--error-color); color: var(--error-color); font-size: 0.9rem; padding: 0.5rem;"
+                title="Fazer Logoff">
+                <span class="material-symbols-outlined">power_settings_new</span>
+            </button>
+        </div>
+
+        <!-- Bottom Right Controls (Mute) -->
+        <div id="audio-controls" style="position: fixed; top: 10px; left: 10px; z-index: 1000;">
+            <button id="mute-btn" class="retro-btn icon-btn" title="Mutar Áudio">🔊</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+
+    <script type="module" src="scripts/game.js"></script>
+</body>
+
+</html>

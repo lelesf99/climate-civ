@@ -1,0 +1,114 @@
+:root {
+    --teal: hsl(188, 86%, 53%);
+    --blue: hsl(222, 47%, 51%);
+    --orange: hsl(21, 90%, 48%);
+    --green: hsl(160, 84%, 39%);
+    --error-color: hsl(0, 84%, 60%);
+
+    --gold: hsl(54, 100%, 50%);
+    --silver: hsl(0, 0%, 80%);
+    --bronze: hsl(25, 100%, 40%);
+
+    --dark-teal: hsl(187, 84%, 10%);
+    --dark-blue: hsl(222, 46%, 11%);
+    --dark-orange: hsl(21, 90%, 10%);
+    --dark-green: hsl(160, 84%, 9%);
+    --dark-error-color: hsl(0, 84%, 20%);
+
+    --muted-teal: hsla(187, 84%, 10%, .5);
+    --muted-blue: hsla(222, 47%, 11%, .5);
+    --muted-orange: hsla(21, 90%, 10%, .5);
+    --muted-green: hsla(160, 84%, 9%, .5);
+    --muted-error-color: hsla(0, 84%, 20%, .5);
+
+    --bg-teal: hsla(188, 86%, 43%, 0.4);
+    --bg-blue: hsl(222, 47%, 41%, 0.4);
+    --bg-orange: hsl(21, 90%, 38%, 0.4);
+    --bg-green: hsl(160, 84%, 29%, 0.4);
+    --bg-error-color: hsl(0, 84%, 50%, 0.4);
+
+    --panel-border: 1px solid var(--teal);
+
+    /* Cyan */
+    --text-color: #ccfbf1;
+    --font-head: 'Orbitron', sans-serif;
+    --font-body: 'Electrolize', sans-serif;
+    --font-code: 'Google Sans Code', monospace;
+
+    --chromatic-text: 2px 2px 1px var(--orange),
+        -2px -2px 1px var(--teal),
+        0 0 5px var(--teal);
+
+    --border-radius-1: 4px;
+    --border-radius-2: 8px;
+    --border-radius-pill: 9999px;
+    }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    background-color: var(--dark-blue);
+    color: var(--text-color);
+    font-family: var(--font-body);
+}
+
+/* ==========================================================================
+   ANIMATIONS & VISUAL EFFECTS (from legacy effects.css & player.css)
+   ========================================================================== */
+@keyframes slideIn {
+    0% { opacity: 0; transform: translateX(-50%); }
+    50% { opacity: 0.3; transform: translateX(0%); }
+    100% { opacity: 1; transform: translateX(0%); }
+}
+
+@keyframes flicker {
+    0% { opacity: 0.95; }
+    5% { opacity: 0.9; }
+    15% { opacity: 0.95; }
+    30% { opacity: 0.97; }
+    40% { opacity: 0.8; }
+    55% { opacity: 0.95; }
+    70% { opacity: 0.82; }
+    100% { opacity: 0.95; }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+@keyframes lineEntry {
+    from { transform: translateX(-5px); opacity: 0; }
+    to { transform: translateX(0); opacity: 0.8; }
+}
+
+@keyframes card-entry {
+    0% { transform: translateX(-50px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scanner {
+    0% { left: -100%; }
+    100% { left: 200%; }
+}
+
+@keyframes loading-slide {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
