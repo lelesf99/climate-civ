@@ -41,12 +41,12 @@ jobs:
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
-          export PUBLIC_FIREBASE_API_KEY=$(echo $FIREBASE_CONFIG | jq -r .apiKey)
-          export PUBLIC_FIREBASE_AUTH_DOMAIN=$(echo $FIREBASE_CONFIG | jq -r .authDomain)
-          export PUBLIC_FIREBASE_PROJECT_ID=$(echo $FIREBASE_CONFIG | jq -r .projectId)
-          export PUBLIC_FIREBASE_STORAGE_BUCKET=$(echo $FIREBASE_CONFIG | jq -r .storageBucket)
-          export PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$(echo $FIREBASE_CONFIG | jq -r .messagingSenderId)
-          export PUBLIC_FIREBASE_APP_ID=$(echo $FIREBASE_CONFIG | jq -r .appId)
+          export PUBLIC_FIREBASE_API_KEY=$(echo "$FIREBASE_CONFIG" | jq -r .apiKey)
+          export PUBLIC_FIREBASE_AUTH_DOMAIN=$(echo "$FIREBASE_CONFIG" | jq -r .authDomain)
+          export PUBLIC_FIREBASE_PROJECT_ID=$(echo "$FIREBASE_CONFIG" | jq -r .projectId)
+          export PUBLIC_FIREBASE_STORAGE_BUCKET=$(echo "$FIREBASE_CONFIG" | jq -r .storageBucket)
+          export PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$(echo "$FIREBASE_CONFIG" | jq -r .messagingSenderId)
+          export PUBLIC_FIREBASE_APP_ID=$(echo "$FIREBASE_CONFIG" | jq -r .appId)
           BASE_PATH=/${{ github.event.repository.name }} npm run build
         
       - name: Setup Pages
